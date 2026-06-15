@@ -176,3 +176,103 @@ func (aq *AlertQueue) StartConsumer(gs *GlobalState) {
 	}()
 }
 
+// ProcessarFilaDrones é o worker que consome a FilaDeMissoes e gerencia o estado de ocupação do Drone
+func ProcessarFilaDrones(gs *GlobalState) {
+	for {
+		var missao Missao
+		var droneEscolhido string
+
+		gs.FilaMissoes.Mu.Lock()
+		for len(gs.FilaMissoes.Missoes) == 0 {
+			gs.FilaMissoes.Cond.Wait()
+		}
+
+		// Encontrar um drone livre
+		for {
+			gs.FrotaMu.RLock()
+			for id, estado := range gs.FrotaGlobal {
+				if !estado.Ocupado && estado.Status == "LIVRE" && estado.Setor == gs.MeuSetor {
+					droneEscolhido = id
+					break
+				}
+			}
+			gs.FrotaMu.RUnlock()
+
+			if droneEscolhido != "" {
+				break
+			}
+			// Libera o lock da fila enquanto dorme para não bloquear o produtor
+			gs.FilaMissoes.Mu.Unlock()
+			time.Sleep(1 * time.Second)
+			gs.FilaMissoes.Mu.Lock()
+			
+			if len(gs.FilaMissoes.Missoes) == 0 {
+				break
+			}
+		}
+
+		if len(gs.FilaMissoes.Missoes) == 0 {
+			// Pode ter esvaziado durante o sleep
+			if droneEscolhido == "" {
+				gs.FilaMissoes.Mu.Unlock()
+			}
+			continue
+		}
+
+		// Pop da missão
+		missao = gs.FilaMissoes.Missoes[0]
+		gs.FilaMissoes.Missoes = gs.FilaMissoes.Missoes[1:]
+		gs.FilaMissoes.Mu.Unlock()
+
+		// Marcar como Ocupado
+		gs.FrotaMu.Lock()
+		if estado, ok := gs.FrotaGlobal[droneEscolhido]; ok {
+			estado.Ocupado = true
+			estado.Status = "EM_MISSAO"
+			estado.MissionId = missao.MissionId
+			estado.SeenAt = time.Now().UnixNano()
+			gs.FrotaGlobal[droneEscolhido] = estado
+		}
+		gs.FrotaMu.Unlock()
+
+		// Despachar para o drone físico
+		gs.DronesMu.RLock()
+		connDrone, ok := gs.DronesLocais[droneEscolhido]
+		gs.DronesMu.RUnlock()
+
+		if ok {
+			cmdMsg := Mensagem{
+				Tipo:    "CMD",
+				Acao:    "DESPACHAR",
+				Posicao: missao.Coordenadas,
+			}
+			payload, err := json.Marshal(cmdMsg)
+			if err == nil {
+				_, err = fmt.Fprintf(connDrone, "%s\n", payload)
+			}
+			if err != nil {
+				fmt.Printf("❌ Erro ao enviar comando da Fila ao drone %s: %v\n", droneEscolhido, err)
+				gs.FrotaMu.Lock()
+				if estado, existe := gs.FrotaGlobal[droneEscolhido]; existe {
+					estado.Ocupado = false
+					estado.Status = "LIVRE"
+					estado.SeenAt = time.Now().UnixNano()
+					gs.FrotaGlobal[droneEscolhido] = estado
+				}
+				gs.FrotaMu.Unlock()
+			} else {
+				fmt.Printf("🎯 [FILA DESPACHO] Missão: %s | Drone: %s\n", missao.MissionId, droneEscolhido)
+			}
+		} else {
+			fmt.Printf("⚠️ Drone %s não conectado ao tentar despachar da Fila!\n", droneEscolhido)
+			gs.FrotaMu.Lock()
+			if estado, existe := gs.FrotaGlobal[droneEscolhido]; existe {
+				estado.Ocupado = false
+				estado.Status = "LIVRE"
+				estado.SeenAt = time.Now().UnixNano()
+				gs.FrotaGlobal[droneEscolhido] = estado
+			}
+			gs.FrotaMu.Unlock()
+		}
+	}
+}

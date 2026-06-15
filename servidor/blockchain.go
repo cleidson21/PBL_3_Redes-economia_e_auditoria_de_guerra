@@ -72,9 +72,20 @@ func ListenToBlockchainEvents(gs *GlobalState) {
 					
 					prio := int(event.Prioridade)
 
-					// Injeta diretamente na fila local sem interferir no pipeline nativo
-					gs.AlertQueue.EnqueueAlert(gs, "0,0", prio, event.MissionId.String())
-					log.Printf("[Web3] ➡️ Alerta injetado nativamente na AlertQueue com MissionID %s", event.MissionId.String())
+					missao := Missao{
+						MissionId:   event.MissionId.String(),
+						Prioridade:  prio,
+						Coordenadas: "0,0",
+					}
+
+					gs.FilaMissoes.Mu.Lock()
+					gs.FilaMissoes.Missoes = append(gs.FilaMissoes.Missoes, missao)
+					posicao := len(gs.FilaMissoes.Missoes)
+					gs.FilaMissoes.Mu.Unlock()
+
+					gs.FilaMissoes.Cond.Signal()
+
+					log.Printf("[Fila] Missão %s adicionada à fila. Posição atual: %d", missao.MissionId, posicao)
 				}
 			}
 		}()

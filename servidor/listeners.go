@@ -198,12 +198,19 @@ func ListenDrones(gs *GlobalState) {
 					if estado, existe := gs.FrotaGlobal[msg.Remetente]; existe {
 						statusAnterior := estado.Status
 						estado.Status = msg.Valor
+						
+						if msg.Valor == "LIVRE" {
+							estado.Ocupado = false
+							// Notifica a FilaDeMissoes que um drone pode estar disponível
+							gs.FilaMissoes.Cond.Broadcast()
+						}
+						
 						estado.SeenAt = time.Now().UnixNano()
 						registrarEstadoDrone(gs, msg.Remetente, estado)
 						if statusAnterior != msg.Valor {
 							fmt.Printf("🔄 [%s] Status atualizado: %s → %s\n", msg.Remetente, statusAnterior, msg.Valor)
 							// Drone acabou de concluir a missão e ficou LIVRE
-							if statusAnterior == "OCUPADO" && msg.Valor == "LIVRE" {
+							if (statusAnterior == "OCUPADO" || statusAnterior == "EM_MISSAO") && msg.Valor == "LIVRE" {
 								go func(droneId string, missionId string) {
 									if missionId == "" {
 										fmt.Printf("⚠️ [%s] Missão concluída sem MissionID Web3 (despacho local ou debug)\n", droneId)

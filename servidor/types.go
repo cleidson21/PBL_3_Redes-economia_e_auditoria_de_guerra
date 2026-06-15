@@ -27,6 +27,21 @@ type EstadoDrone struct {
 	Setor     string `json:"setor"`
 	SeenAt    int64  `json:"seen_at,omitempty"`
 	MissionId string `json:"missionId,omitempty"`
+	Ocupado   bool   `json:"ocupado,omitempty"`
+}
+
+// Missao representa uma tarefa originada da Blockchain
+type Missao struct {
+	MissionId   string
+	Prioridade  int
+	Coordenadas string
+}
+
+// FilaDeMissoes gerencia de forma segura as missões a serem executadas
+type FilaDeMissoes struct {
+	Missoes []Missao
+	Mu      sync.Mutex
+	Cond    *sync.Cond
 }
 
 // Alert representa um item de trabalho da fila com prioridade e controle de starvation.
@@ -78,7 +93,8 @@ type GlobalState struct {
 	FrotaMu     sync.RWMutex
 	FrotaGlobal map[string]EstadoDrone
 
-	AlertQueue *AlertQueue
+	AlertQueue  *AlertQueue
+	FilaMissoes *FilaDeMissoes
 }
 
 // NewGlobalState cria o estado global inicializado com as estruturas de fila e mapas vazios.
@@ -102,6 +118,12 @@ func NewGlobalState(meuSetor string, cfg *Config, maxQueueSize, starveThreshold 
 	}
 	aq.notEmpty = sync.NewCond(&aq.mu)
 	gs.AlertQueue = aq
+
+	fm := &FilaDeMissoes{
+		Missoes: make([]Missao, 0),
+	}
+	fm.Cond = sync.NewCond(&fm.Mu)
+	gs.FilaMissoes = fm
 
 	return gs
 }
