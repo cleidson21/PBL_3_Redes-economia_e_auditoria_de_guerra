@@ -10,15 +10,15 @@ type Mensagem struct {
 	Tipo       string                 `json:"tipo"`
 	Remetente  string                 `json:"remetente,omitempty"`
 	Destino    string                 `json:"destino,omitempty"`
-	Relogio    int                    `json:"relogio,omitempty"`
 	Prioridade int                    `json:"prioridade,omitempty"`
 	Acao       string                 `json:"acao,omitempty"`
 	Valor      string                 `json:"valor,omitempty"`
 	Posicao    string                 `json:"posicao,omitempty"`
 	Frota      map[string]EstadoDrone `json:"frota,omitempty"`
+	// Relogio int `json:"relogio,omitempty"` // Removido do modelo PBL 2
 }
 
-// EstadoDrone descreve o estado atual conhecido de um drone na frota global.
+// EstadoDrone descreve o estado atual conhecido de um drone na frota local.
 type EstadoDrone struct {
 	Status string `json:"status"`
 	Setor  string `json:"setor"`
@@ -31,8 +31,8 @@ type Alert struct {
 	Prioridade    int
 	Timestamp     int64
 	ID            string
-	Lamport       int
 	StarveCounter int
+	// Lamport int // Removido do modelo PBL 2
 }
 
 // AlertQueue gerencia filas separadas de prioridade com prevenção de starvation.
@@ -46,13 +46,18 @@ type AlertQueue struct {
 	processedCount  int
 }
 
-// GlobalState reúne o estado compartilhado do servidor e a infraestrutura de concorrência associada.
+// Config representa a estrutura de configuração carregada de config.json
+type Config struct {
+	ServerPort    int    `json:"server_port"`
+	BlockchainRPC string `json:"blockchain_rpc"`
+}
+
+// GlobalState reúne o estado compartilhado do servidor.
 type GlobalState struct {
 	MeuSetor     string
 	MeuNamespace string
-
-	RelogioMu sync.Mutex
-	Relogio   int
+	ServerPort   int
+	BlockchainRPC string
 
 	RadaresMu    sync.RWMutex
 	Radares      map[string]net.Conn
@@ -63,40 +68,24 @@ type GlobalState struct {
 	DashboardsMu sync.RWMutex
 	Dashboards   map[net.Conn]bool
 
-	VizinhosMu sync.RWMutex
-	Vizinhos   map[string]net.Conn
-
 	FrotaMu     sync.RWMutex
 	FrotaGlobal map[string]EstadoDrone
-
-	RicartMu          sync.Mutex
-	EstadoRicart      string
-	MeuTempoPedido    int
-	MinhaPrioridade   int
-	RequisicaoAtualID string
-	ContadorAging     int
-	AcksRecebidos     int
-	FilaDeEspera      []Mensagem
-	AlvoAtual         string
 
 	AlertQueue *AlertQueue
 }
 
 // NewGlobalState cria o estado global inicializado com as estruturas de fila e mapas vazios.
-func NewGlobalState(meuSetor string, maxQueueSize, starveThreshold int) *GlobalState {
+func NewGlobalState(meuSetor string, serverPort int, blockchainRPC string, maxQueueSize, starveThreshold int) *GlobalState {
 	gs := &GlobalState{
 		MeuSetor:      meuSetor,
 		MeuNamespace:  "ORMUZ/" + meuSetor,
-		Relogio:       0,
+		ServerPort:    serverPort,
+		BlockchainRPC: blockchainRPC,
 		Radares:       make(map[string]net.Conn),
 		Sensores:      make(map[string]*net.UDPAddr),
 		DronesLocais:  make(map[string]net.Conn),
 		Dashboards:    make(map[net.Conn]bool),
-		Vizinhos:      make(map[string]net.Conn),
 		FrotaGlobal:   make(map[string]EstadoDrone),
-		EstadoRicart:  "LIVRE",
-		ContadorAging: 0,
-		AcksRecebidos: 0,
 	}
 
 	aq := &AlertQueue{
@@ -110,3 +99,4 @@ func NewGlobalState(meuSetor string, maxQueueSize, starveThreshold int) *GlobalS
 
 	return gs
 }
+

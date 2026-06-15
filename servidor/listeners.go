@@ -121,7 +121,7 @@ func ListenSensoresTLM(gs *GlobalState) {
 	}
 }
 
-// ListenRadarTCP consome eventos críticos TCP, sincroniza Lamport e distribui alertas para o restante do sistema.
+// ListenRadarTCP consome eventos críticos TCP e distribui alertas para o restante do sistema.
 func ListenRadarTCP(gs *GlobalState) {
 	listener, err := net.Listen("tcp", ":48081")
 	if err != nil {
@@ -147,7 +147,6 @@ func ListenRadarTCP(gs *GlobalState) {
 				}
 
 				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
-				SyncLamport(gs, msg.Relogio)
 
 				if msg.Tipo == "EVT" && msg.Acao == "ALERTA" {
 					AtualizarDashboards(gs, msg)
@@ -187,7 +186,6 @@ func ListenDrones(gs *GlobalState) {
 				}
 
 				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
-				SyncLamport(gs, msg.Relogio)
 
 				if msg.Tipo == "REG" {
 					droneID = msg.Remetente
@@ -282,7 +280,6 @@ func ListenDashboardTCP(gs *GlobalState) {
 				}
 
 				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
-				SyncLamport(gs, msg.Relogio)
 
 				if msg.Tipo == "CMD" && msg.Acao == "REQUISICAO_MANUAL" {
 					fmt.Printf("👨‍💻 Operador solicitou inspeção manual para: %s\n", msg.Posicao)

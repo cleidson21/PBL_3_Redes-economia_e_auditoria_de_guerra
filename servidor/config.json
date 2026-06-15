@@ -1,0 +1,4 @@
+{
+  "server_port": 48080,
+  "blockchain_rpc": "http://127.0.0.1:8545"
+}

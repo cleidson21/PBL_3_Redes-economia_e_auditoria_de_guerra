@@ -34,16 +34,6 @@ fi
 
 NOME_SETOR="${NOME_SETOR:-SETOR_$(printf '%02d' "$HOST_OCTET")}"
 
-PEERS_LIST=()
-for i in $(seq "$IP_INICIO" "$IP_FIM"); do
-    if [[ "$i" == "$HOST_OCTET" ]]; then
-        continue
-    fi
-    PEERS_LIST+=("${IP_PREFIX}.${i}:48084")
-done
-
-PEERS="${PEERS:-$(IFS=,; echo "${PEERS_LIST[*]}")}"
-
 IMAGE_SERVIDOR="${IMAGE_SERVIDOR:-cleidsonramos/servidor:latest}"
 USE_LOCAL_BUILD="${USE_LOCAL_BUILD:-false}"
 
@@ -61,10 +51,9 @@ docker run -d --name servidor_ormuz \
     -p 48081:48081/tcp \
     -p 48082:48082/tcp \
     -p 48083:48083/tcp \
-    -p 48084:48084/tcp \
     -e MEU_SETOR="$NOME_SETOR" \
-    -e PEERS="$PEERS" \
     "$IMAGE_SERVIDOR"
+
 
 echo "✅ Servidor [$NOME_SETOR] iniciado com sucesso em background!"
 echo "💡 Dica: Para acompanhar os logs em tempo real, digite: docker logs -f servidor_ormuz"

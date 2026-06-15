@@ -10,7 +10,10 @@
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.13",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.7",
     "@types/node": "^22.19.20",
+    "ethers": "^6.16.0",
     "hardhat": "^3.9.0",
     "typescript": "~6.0.3"
   },

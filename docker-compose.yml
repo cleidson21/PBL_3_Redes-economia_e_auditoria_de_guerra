@@ -4,7 +4,6 @@ services:
     container_name: servidor_ormuz_a
     environment:
       MEU_SETOR: SETOR_A
-      PEERS: servidor_b:48084,servidor_c:48084
     networks:
       - rede_ormuz
     ports:
@@ -19,7 +18,6 @@ services:
     container_name: servidor_ormuz_b
     environment:
       MEU_SETOR: SETOR_B
-      PEERS: servidor_a:48084,servidor_c:48084
     networks:
       - rede_ormuz
     ports:
@@ -34,7 +32,6 @@ services:
     container_name: servidor_ormuz_c
     environment:
       MEU_SETOR: SETOR_C
-      PEERS: servidor_a:48084,servidor_b:48084
     networks:
       - rede_ormuz
     ports:
