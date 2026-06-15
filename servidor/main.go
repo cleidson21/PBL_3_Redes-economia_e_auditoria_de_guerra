@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"time"
 )
@@ -69,11 +70,16 @@ func main() {
 		}
 	}
 
-	gs := NewGlobalState(meuSetor, cfg.ServerPort, cfg.BlockchainRPC, 100, 3)
+	gs := NewGlobalState(meuSetor, cfg, 100, 3)
+
+	if err := InitBlockchain(gs); err != nil {
+		log.Fatalf("❌ Erro fatal na inicialização da Blockchain: %v", err)
+	}
+	go ListenToBlockchainEvents(gs)
 
 	fmt.Printf("🚀 Servidor de Setor Iniciado: [%s]\n", gs.MeuNamespace)
 	fmt.Printf("📥 Buffer de fila: 100 alertas | Starvation threshold: 3 ciclos críticos\n")
-	fmt.Printf("🔗 Blockchain RPC: %s\n", gs.BlockchainRPC)
+	fmt.Printf("🔗 Blockchain RPC: %s\n", gs.ConfigData.BlockchainRPC)
 	fmt.Println("==================================================")
 
 	go ListenSensoresTLM(gs)

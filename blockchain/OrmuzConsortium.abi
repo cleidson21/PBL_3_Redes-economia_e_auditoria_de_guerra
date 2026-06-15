@@ -26,6 +26,16 @@
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "DeadlineExpired",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "DeadlineNotExpired",
+    "type": "error"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -112,6 +122,36 @@
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "InsufficientBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidPriority",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MissionNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "MissionNotPending",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ReentrancyGuardReentrantCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "UnauthorizedClient",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -141,14 +181,14 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "address",
-        "name": "customer",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "missionId",
+        "type": "uint256"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "operator",
+        "name": "client",
         "type": "address"
       },
       {
@@ -159,14 +199,14 @@
       },
       {
         "indexed": false,
-        "internalType": "string",
-        "name": "missionId",
-        "type": "string"
+        "internalType": "uint8",
+        "name": "prioridade",
+        "type": "uint8"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "timestamp",
+        "name": "deadline",
         "type": "uint256"
       }
     ],
@@ -178,26 +218,8 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "string",
-        "name": "missionId",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "droneId",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "incidentStatus",
-        "type": "string"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
-        "name": "timestamp",
+        "name": "missionId",
         "type": "uint256"
       },
       {
@@ -205,9 +227,40 @@
         "internalType": "address",
         "name": "reporter",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
       }
     ],
-    "name": "MissionReportRegistered",
+    "name": "MissionCompleted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "missionId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "client",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "RefundIssued",
     "type": "event"
   },
   {
@@ -325,12 +378,51 @@
   },
   {
     "inputs": [],
+    "name": "ESCOLTA_CRITICA",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "ESCOLTA_NORMAL",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "MINTER_ROLE",
     "outputs": [
       {
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "MISSION_TIMEOUT",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -432,77 +524,6 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "index",
-        "type": "uint256"
-      }
-    ],
-    "name": "getMissionIdAtIndex",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "missionId",
-        "type": "string"
-      }
-    ],
-    "name": "getMissionReport",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "droneId",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "coordinates",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "incidentStatus",
-        "type": "string"
-      },
-      {
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "reporter",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getMissionReportsCount",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
         "internalType": "bytes32",
         "name": "role",
         "type": "bytes32"
@@ -580,6 +601,65 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "missions",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "id",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "client",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "prioridade",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint256",
+        "name": "escrowAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "createdAt",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
+      },
+      {
+        "internalType": "enum OrmuzConsortium.MissionStatus",
+        "name": "status",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "reporter",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "reportData",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "name",
     "outputs": [
@@ -595,22 +675,31 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "string",
-        "name": "missionId",
-        "type": "string"
+        "internalType": "uint8",
+        "name": "prioridade",
+        "type": "uint8"
       }
     ],
     "name": "payForEscort",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "missionId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "missionId",
+        "type": "uint256"
+      }
+    ],
+    "name": "reclamarReembolso",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -618,9 +707,9 @@
   {
     "inputs": [
       {
-        "internalType": "string",
+        "internalType": "uint256",
         "name": "missionId",
-        "type": "string"
+        "type": "uint256"
       },
       {
         "internalType": "string",
@@ -713,6 +802,19 @@
   },
   {
     "inputs": [],
+    "name": "totalEscrowLocked",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "totalSupply",
     "outputs": [
       {
@@ -775,6 +877,19 @@
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "treasury",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ]

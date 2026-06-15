@@ -3,6 +3,10 @@ package main
 import (
 	"net"
 	"sync"
+
+	"github.com/cleidson21/servidor/contract"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Mensagem representa o envelope JSON usado entre sensores, drones, dashboards e vizinhos.
@@ -20,9 +24,10 @@ type Mensagem struct {
 
 // EstadoDrone descreve o estado atual conhecido de um drone na frota local.
 type EstadoDrone struct {
-	Status string `json:"status"`
-	Setor  string `json:"setor"`
-	SeenAt int64  `json:"seen_at,omitempty"`
+	Status    string `json:"status"`
+	Setor     string `json:"setor"`
+	SeenAt    int64  `json:"seen_at,omitempty"`
+	MissionId string `json:"missionId,omitempty"`
 }
 
 // Alert representa um item de trabalho da fila com prioridade e controle de starvation.
@@ -48,8 +53,10 @@ type AlertQueue struct {
 
 // Config representa a estrutura de configuração carregada de config.json
 type Config struct {
-	ServerPort    int    `json:"server_port"`
-	BlockchainRPC string `json:"blockchain_rpc"`
+	ServerPort      int    `json:"server_port"`
+	BlockchainRPC   string `json:"blockchain_rpc"`
+	ContractAddress string `json:"contract_address"`
+	PrivateKey      string `json:"private_key"`
 }
 
 // GlobalState reúne o estado compartilhado do servidor.
@@ -57,7 +64,11 @@ type GlobalState struct {
 	MeuSetor     string
 	MeuNamespace string
 	ServerPort   int
-	BlockchainRPC string
+	ConfigData   *Config
+
+	EthClient       *ethclient.Client
+	Contract        *contract.OrmuzConsortium
+	ContractAddress common.Address
 
 	RadaresMu    sync.RWMutex
 	Radares      map[string]net.Conn
@@ -75,12 +86,12 @@ type GlobalState struct {
 }
 
 // NewGlobalState cria o estado global inicializado com as estruturas de fila e mapas vazios.
-func NewGlobalState(meuSetor string, serverPort int, blockchainRPC string, maxQueueSize, starveThreshold int) *GlobalState {
+func NewGlobalState(meuSetor string, cfg *Config, maxQueueSize, starveThreshold int) *GlobalState {
 	gs := &GlobalState{
 		MeuSetor:      meuSetor,
 		MeuNamespace:  "ORMUZ/" + meuSetor,
-		ServerPort:    serverPort,
-		BlockchainRPC: blockchainRPC,
+		ServerPort:    cfg.ServerPort,
+		ConfigData:    cfg,
 		Radares:       make(map[string]net.Conn),
 		Sensores:      make(map[string]*net.UDPAddr),
 		DronesLocais:  make(map[string]net.Conn),

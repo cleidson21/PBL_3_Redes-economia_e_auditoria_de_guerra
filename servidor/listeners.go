@@ -216,6 +216,24 @@ func ListenDrones(gs *GlobalState) {
 						registrarEstadoDrone(gs, msg.Remetente, estado)
 						if statusAnterior != msg.Valor {
 							fmt.Printf("🔄 [%s] Status atualizado: %s → %s\n", msg.Remetente, statusAnterior, msg.Valor)
+							// Drone acabou de concluir a missão e ficou LIVRE
+							if statusAnterior == "OCUPADO" && msg.Valor == "LIVRE" {
+								go func(droneId string, missionId string) {
+									if missionId == "" {
+										fmt.Printf("⚠️ [%s] Missão concluída sem MissionID Web3 (despacho local ou debug)\n", droneId)
+										return
+									}
+									fmt.Printf("✅ [%s] Missão concluída! Enviando Laudo Web3 (ID: %s)\n", droneId, missionId)
+									err := RegistrarLaudoBlockchain(gs, missionId, droneId, "0,0", "SUCESSO")
+									if err != nil {
+										fmt.Printf("⚠️ [%s] Erro no laudo Web3: %v\n", droneId, err)
+									}
+								}(msg.Remetente, estado.MissionId)
+								
+								// Limpa o rastreio da missão após emissão do laudo
+								estado.MissionId = ""
+								gs.FrotaGlobal[msg.Remetente] = estado
+							}
 						}
 						gs.FrotaMu.Unlock()
 						AtualizarDashboards(gs, msg)

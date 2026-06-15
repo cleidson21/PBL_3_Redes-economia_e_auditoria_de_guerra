@@ -40,6 +40,7 @@ func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, p
 	gs.FrotaMu.Lock()
 	if estado, ok := gs.FrotaGlobal[droneEscolhido]; ok {
 		estado.Status = "EM_MISSAO"
+		estado.MissionId = requisicaoID
 		estado.SeenAt = time.Now().UnixNano()
 		gs.FrotaGlobal[droneEscolhido] = estado
 	}
