@@ -1,108 +1,123 @@
-# Ormuz Consortium – Redes Distribuídas (PBL 3)
-> **Escolta Naval Autônoma Orquestrada por Blockchain**
+# Ormuz Consortium – Escolta Naval Autônoma
 
-Este repositório contém a consolidação técnica da arquitetura Web3 aplicada a sistemas distribuídos navais (Problema 3). O projeto resolve o desafio do despacho de drones físicos conectando as solicitações financeiras diretamente a uma Blockchain (Ethereum Virtual Machine) em ambiente fechado, eliminando pontos únicos de falha e impedindo atuações bizantinas através da custódia do Smart Contract.
+## Resumo Executivo
 
----
+O Ormuz Consortium é uma plataforma autônoma de segurança marítima que orquestra frotas de Drones de Patrulha através de Contratos Inteligentes (Smart Contracts). O sistema conecta a solicitação de missões e sua respectiva liquidação financeira a atuações IoT (Internet of Things) no mundo físico, operando em um ecossistema *trustless* onde a confiabilidade repousa na Blockchain e não em intermediários humanos.
 
 ## Visão Geral
-A infraestrutura simula um Consórcio de empresas navais que necessitam contratar Drones de Segurança para patrulhar suas cargas. O sistema processa o pagamento digital (OPC Token), bloqueia o pagamento em *Escrow* (Garantia), dispara Drones no mundo real através do Servidor Borda (Oracle em Go) e, mediante auditoria de conclusão técnica, credita a Companhia prestadora.
 
-## Mudança de Paradigma: PBL 2 → PBL 3
-Durante o PBL 2, a coordenação da frota dependia estritamente de topologias distribuídas via TCP. Esse modelo incluía:
-- **PBL 2 (Obsoleto):** Sincronização de nós via Relógios Lógicos de Lamport, Exclusão Mútua Distribuída (Ricart-Agrawala), repasse de malhas via algoritmo Gossip e complexo mecanismo de *Failover* entre Servidores Vizinhos. O modelo sofria de sobrecarga na rede e não oferecia garantias de blindagem contra servidores maliciosos que reportavam missões inventadas para gerar receita ilícita.
+A arquitetura do projeto é segregada em componentes estritos e especializados:
 
-- **PBL 3 (Arquitetura Atual Web3):** Os algoritmos de consenso acadêmico foram completamente substituídos pela imutabilidade dos Smart Contracts em Solidity. A **Blockchain assumiu como Fonte Única de Verdade**. O servidor back-end em Go teve seu papel enxugado para ser apenas um *Oracle*, ou seja, um escutador operacional que move o hardware local. A segurança contra operantes maliciosos mudou do software para a **geometria financeira (Escrow e Reembolso Automático por Timeout)**.
+* **Blockchain (EVM):** Ambiente de liquidação contínua que garante a custódia das transações e dita o estado global do sistema de forma imutável.
+* **Smart Contracts:** Regras de negócio programadas em Solidity que implementam o bloqueio de fundos e a cobrança automática de prazos operativos.
+* **Cliente CLI:** Interface tática interativa construída em TypeScript que permite às empresas logísticas contratar escoltas, acompanhar eventos on-chain e exigir o ressarcimento financeiro em casos de inatividade.
+* **Companhia Oracle:** Servidor operacional desenvolvido em Go. Atua primariamente como uma ponte de leitura/escrita, extraindo ordens validadas da Blockchain para emitir despachos para as frotas reais.
+* **Drones Patrulha:** Atuadores de borda responsáveis por receber instruções exclusivas da Companhia Oracle e reportar *Acknowledge* (ACK) de conclusão de patrulhamento no domínio físico.
 
----
+## Fluxo Operacional
+
+O ciclo de vida completo de uma operação naval transcorre nas seguintes etapas:
+
+1. **Contratação:** A empresa utiliza o Cliente CLI para requisitar a escolta, pagando a taxa estipulada no token nativo da rede (OPC).
+2. **Escrow (Bloqueio):** O Smart Contract recebe e bloqueia os OPCs internamente, recusando-se a repassar os fundos imediatamente à prestadora do serviço.
+3. **Emissão de Evento:** A Blockchain emite um evento criptográfico anunciando globalmente o requerimento de escolta.
+4. **Captura:** A Companhia Oracle capta o evento assíncrono oriundo da Blockchain.
+5. **Despacho:** A Companhia sinaliza e engatilha a decolagem do Drone Patrulha de prontidão.
+6. **Auditoria (Laudo):** O Drone informa a conclusão física da missão. A Companhia Oracle assina e injeta a transação de "Laudo Concluído" de volta à Blockchain.
+7. **Liquidação Financeira:** Com o laudo validado, o Smart Contract autoriza a liberação dos fundos do Escrow para a tesouraria da prestadora.
 
 ## Arquitetura
-A plataforma abandonou a malha densa para agir em uma topologia linear vertical imutável:
 
-```text
-       Cliente CLI (TypeScript)
-                 │
-                 ▼
-     Blockchain (Hardhat / Solidity)
-                 │
-                 ▼
-       Companhia Oracle (Go)
-                 │
-                 ▼
-         Drones Físicos (TCP)
+O diagrama a seguir exibe o fluxo de comunicação de sentido único e retorno operacional da plataforma:
+
+```mermaid
+graph TD
+    A[Cliente CLI] -->|1. Solicita e Paga OPC| B[(Blockchain EVM)]
+    B -->|2. Evento Escolta Solicita| C{Companhia Oracle}
+    C -->|3. Comando IoT| D[Drone Patrulha]
+    D -.->|4. Missão Concluída| C
+    C -.->|5. Registro de Laudo| B
+    B -.->|6. Evento Laudo/Reembolso| A
 ```
 
----
+## Segurança e Confiabilidade
 
-## Modelo de Segurança
-A governança da arquitetura é puramente matemática e executada na EVM:
-- **Escrow**: O operador naval não paga ao Consórcio Go. Ele envia os tokens ao *Smart Contract* onde eles ficam congelados enquanto a frota estiver em operação.
-- **Proteção contra Operador Malicioso**: Se o Servidor Borda inventar laudos e tentar cobrar o Cliente sem que uma solicitação tenha sido empenhada de antemão, a Blockchain aborta (`Revert`) a requisição por tentar sacar fundos inexistentes.
-- **Proteção contra Dupla Cobrança**: É fisicamente impossível enviar dois pagamentos para o mesmo *nonce* de missão e acionar Drones duplicados simultaneamente.
-- **Timeout e Reembolso (Falha do Servidor)**: Se a Companhia Oracle falhar (Queda de Energia ou Rede), o Smart Contract aguardará um limite predeterminado de blocos (Timeout). Ultrapassado o limite, a missão é taxada como Falha Crítica e o Cliente ativa a função Reembolso, resgatando 100% dos seus OPCs do *Escrow*.
+A rede utiliza paradigmas de proteção rigorosos contra falhas de infraestrutura e agentes mal-intencionados:
 
----
+* **Escrow:** Todo recurso financeiro permanece travado pela Blockchain. Drones não se movem sem pagamento prévio garantido, e Companhias não faturam sem entregar laudos atestados.
+* **Timeout:** Se uma missão contratada falhar em reportar seu laudo dentro de uma janela de blocos pré-definida, ela expira irreversivelmente.
+* **Reembolso:** Missões expiradas por *Timeout* dão ao Cliente o poder exclusivo de invocar a devolução integral dos tokens parados no *Escrow*.
+* **Imutabilidade e Auditoria:** Não há banco de dados central. Todas as operações logísticas podem ser auditadas por qualquer nó conectado à Blockchain.
+* **Proteção contra Operador Malicioso:** É matematicamente inviável à Companhia Oracle sacar fundos inventando IDs de missão irreais ou cobrando múltiplas vezes pela mesma atividade.
+* **Proteção contra Pagamentos Indevidos:** A Blockchain anula transações que não possuam saldo suficiente, protegendo a rede contra falsas requisições (Spam).
 
-## Guia de Execução Local (Básica)
-Para rodar os serviços localmente sem orquestrador Docker, abra janelas de terminal separadas e execute em ordem:
+## Estrutura do Repositório
+
+```text
+ormuz/
+├── blockchain/      # Ambiente Hardhat, Smart Contracts (Solidity) e scripts de Deploy.
+├── client_cli/      # Aplicação TS (Dashboard da Empresa) e Simulador automatizado.
+├── servidor/        # Código-fonte da Companhia Oracle (Go) que escuta a EVM.
+├── drone/           # Código-fonte do atuador físico (IoT Edge).
+├── docs/            # Documentação técnica profunda e detalhamento dos fluxos econômicos.
+└── arquivos_sh/     # Ferramental DevOps (Integração e Deploy Contínuo).
+```
+
+## Execução Local
 
 1. **Hardhat Node:**
+   Suba a Blockchain localmente:
    ```bash
    cd blockchain
    npm install
    npx hardhat node
    ```
-2. **Deploy do Contrato e Geração do Abigen:**
+2. **Deploy e Bindings:**
+   Em um segundo terminal, instaure o Smart Contract e crie as interfaces de comunicação para o Go:
    ```bash
    cd blockchain
    npx hardhat ignition deploy ignition/modules/OrmuzConsortium.ts --network localhost
-   # O script automático na raiz "generate_abi.sh" cria os bindings para a pasta servidor/contract
+   ./generate_abi.sh
    ```
-3. **Servidor Go (Oracle):**
+3. **Companhia Oracle:**
+   Inicie o motor operacional na raiz do servidor:
    ```bash
    cd servidor
-   go build ./...
    go run main.go types.go queue.go listeners.go
    ```
-4. **Drones (Opcional):** `cd drone && go run main.go`
-5. **Client CLI / Simulador:**
+4. **Cliente CLI:**
+   Acione o painel tático das empresas contratantes:
    ```bash
    cd client_cli
    npm install
-   npm run start     # Para operar manualmente o dashboard da Empresa
-   npm run simulate  # Para iniciar a Bateria Automatizada de Testes de Escrow e Fallback Bizantino
+   npm run start
    ```
 
----
+## Execução Docker
 
-## Guia de Execução Docker (Produção)
-O projeto conta com scripts DevOPS de integração ponta-a-ponta para subir as três camadas (Node Blockchain, Go Oracle e 2 Drones) autonomamente:
+Para simplificar o levantamento de toda a plataforma de forma enjaulada, execute o pipeline de orquestração automatizado:
 
-1. Inicializar os containers em Background:
-   ```bash
-   docker compose up -d
-   ```
-2. Disparar a Demonstração (Validará a integridade do nó e rodará os fluxos):
-   ```bash
-   ./arquivos_sh/start_demo.sh
-   ```
+```bash
+# Sobe a Blockchain, a Companhia Oracle e dois Drones Patrulha
+docker compose up -d
 
-*(Para empacotar novas imagens para o Hub, o repositório disponibiliza o `arquivos_sh/build_and_push.sh`).*
+# Aguarda a estabilização da EVM e executa as demonstrações operacionais simuladas
+./arquivos_sh/start_demo.sh
+```
 
----
+## Operação Distribuída
 
-## Guia de Execução Distribuída
-O sistema suporta topologia fragmentada em redes reais na Faculdade. Se as camadas rodam em laboratórios separados, as portas são customizáveis via variáveis de ambiente:
+Para arquitetar uma implantação de rede dividida (Componentes executados fisicamente em máquinas de laboratório distintas), devem-se ajustar as seguintes variáveis de ambiente:
 
-- **Na Máquina do Cliente:** Apontar o IP fixo de onde a rede Ethereum Subiu.
-  ```bash
-  export BLOCKCHAIN_RPC="ws://[IP_MAQUINA_A]:8545"
-  export CONTRACT_ADDRESS="0x5FbDB..."
-  ```
-- **Na Máquina dos Drones:** Apontar a porta de escuta do Servidor Oracle:
-  ```bash
-  export SERVER_ADDR="[IP_MAQUINA_B]:48082"
-  ```
-- *As Chaves Privadas do deployer (Companhia) e do Operador (Empresa)* são gerenciáveis via carteiras Ethereum padrão fornecidas pelo Hardhat durante os testes de estresse.
+* `BLOCKCHAIN_RPC`: No **Cliente CLI** e na **Companhia Oracle**, aponte esta variável para o IP real da máquina onde a Blockchain subiu (`ws://[IP]:8545`).
+* `CONTRACT_ADDRESS`: Em todos os nós, alimente esta variável caso o endereço do Smart Contract gerado no deploy mude.
+* `SERVER_ADDR`: Nos **Drones Patrulha**, aponte para a máquina na qual a Companhia Oracle está alocada (`[IP]:48082`).
 
-> Para detalhes em UML/Mermaid sobre as lógicas da Economia, visite a [Documentação de Arquitetura e Testes](docs/README.md).
+*Nota:* As chaves privadas (`Private Keys`) do Cliente e da Companhia encontram-se mapeadas de maneira estática (originadas pela EVM do Hardhat) para propósitos de simulação técnica.
+
+## Referências
+
+Para um mergulho profundo no funcionamento da cripto-economia e nas validações do sistema, acesse as documentações nativas:
+
+* [docs/arquitetura.md](docs/arquitetura.md) — Diagramação da Máquina de Estados e fluxos econômicos de Timeout.
+* [docs/testes.md](docs/testes.md) — Roteiros técnicos detalhando os resultados aguardados pelas simulações.

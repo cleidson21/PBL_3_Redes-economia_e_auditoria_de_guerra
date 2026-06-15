@@ -1,23 +1,22 @@
-# Documentação Técnica do Projeto (PBL 3)
+# Portal de Documentação Técnica
 
-Bem-vindo ao índice central da documentação técnica do sistema de escolta naval governado por Blockchain. Toda a estrutura obsoleta do PBL 2 (baseada em coordenação distribuída P2P) foi expurgada deste repositório para evitar dívida técnica.
+Bem-vindo à documentação técnica oficial do sistema autônomo de escolta naval orquestrado por Smart Contracts.
 
-Abaixo, encontram-se os guias da nova arquitetura:
+O objetivo deste repositório é prover uma plataforma distribuída, segura e tolerante a falhas para a gestão financeira e operacional de Drones de Patrulha em missões navais.
 
-## 1. [Arquitetura](arquitetura.md)
-Detalha o núcleo conceitual e os fluxos da plataforma.
+## Fluxo de Leitura Recomendado
 
-A nova solução é composta por uma topologia em três camadas:
-- **Blockchain (Hardhat/Solidity):** Atua como fonte única e imutável de verdade, custódia e tempo (Escrow/Timeout). Garante matematicamente a mitigação de falhas bizantinas.
-- **Oracle (Servidor Go):** Intermediário técnico que enxerga as ordens financeiras da Blockchain e comanda drones de patrulha no mundo real, enviando de volta laudos técnicos.
-- **Drone (Cliente IoT):** Atuadores operacionais que apenas efetuam missões físicas.
+Para compreender integralmente a solução, recomendamos a seguinte ordem de leitura:
 
-Neste guia também estão incluídos os **Diagramas Mermaid** para os Fluxos de Escolta e Falha/Reembolso.
+1. **[Visão Geral e Operação](../README.md)**  
+   *Documento raiz do projeto contendo o fluxo operacional, arquitetura base e os manuais de execução.*
 
-## 2. [Testes e Demonstração](testes.md)
-Guia de validação da infraestrutura DevOps e dos fluxos do contrato inteligente.
+2. **[Arquitetura Econômica](arquitetura.md)**  
+   *Detalhamento do fluxo financeiro, custódia de fundos (Escrow) e resolução de disputas matemáticas.*
 
-O ambiente possui um Client TS provido de um *Simulador Automatizado* que percorre três caminhos avaliativos cruciais:
-- **Cenário 1:** A execução de uma escolta ponta-a-ponta com liberação do pagamento para a Tesouraria.
-- **Cenário 2:** A interrupção de um Servidor e/ou Drone durante a escolta (Falha Bizantina), resultando no esgotamento da janela de tempo da missão e no reembolso do Cliente.
-- **Cenário 3:** A tentativa fracassada de forjar laudos e invadir o Contrato Inteligente para roubo de criptomoedas, bloqueada pelas *Reverts* da EVM.
+3. **[Testes e Simulações](testes.md)**  
+   *Documentação dos cenários automatizados do Cliente CLI, evidenciando o comportamento da rede em situações de normalidade e de falhas sistêmicas.*
+
+---
+
+**Nota Organizacional:** A documentação executiva e os guias de subida (Deploy) residem no `README.md` da raiz do repositório. Este diretório (`/docs`) agrupa exclusivamente o aprofundamento técnico e as validações criptográficas do projeto.
