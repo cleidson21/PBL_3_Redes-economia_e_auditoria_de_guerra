@@ -1,313 +1,133 @@
-# PBL 2 - Redes: Desbloqueio do Estreito de Ormuz
+# Ormuz Consortium – Redes Distribuídas (PBL 3)
+> **Blockchain-based Coordination for Autonomous Drone Fleets**
 
-Projeto da disciplina de Conectividade e Concorrência com arquitetura distribuída orientada a eventos, usando Go, TCP/UDP e Docker.
+Este repositório contém a infraestrutura completa do PBL 3 (Problema 3) da disciplina de Redes de Computadores. Ele orquestra o despacho autônomo de escoltas navais operadas por drones através de contratos inteligentes (Smart Contracts) com compensação financeira nativa, proteção contra falhas bizantinas e auditoria imutável.
 
-Este repositório modela uma rede de vigilância marítima com servidores de setor em malha P2P, sensores, drones e painel de operação. A versão atual já está modularizada no servidor e inclui filas com prioridade, producer-consumer e documentação separada por assunto.
+---
 
-## Documentação oficial
+## 1. Introdução
 
-Esta README funciona como página principal. Para navegação técnica, use o portal em [docs/README.md](docs/README.md).
+No modelo arquitetural anterior (PBL 2), o despacho de drones era gerido via comunicação P2P com algoritmos acadêmicos clássicos (Ricart-Agrawala, Relógios de Lamport, Eleição de Líder). 
 
-- [docs/README.md](docs/README.md) - portal da documentação técnica.
-- [docs/REFACTORING_README.md](docs/REFACTORING_README.md) - índice geral da refatoração e quick start.
-- [docs/REFACTORING_SUMMARY.md](docs/REFACTORING_SUMMARY.md) - resumo executivo da entrega.
-- [docs/MODULARIZATION_CHANGELOG.md](docs/MODULARIZATION_CHANGELOG.md) - explicação da modularização, fila e fluxo.
-- [docs/TESTING_GUIDE_v2.md](docs/TESTING_GUIDE_v2.md) - testes unitários, integração e stress.
-- [docs/CODE_REVIEW_GUIDE.md](docs/CODE_REVIEW_GUIDE.md) - guia de leitura do código por módulo.
-- [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) - relatório final da implementação.
-- [docs/FILE_INDEX.txt](docs/FILE_INDEX.txt) - mapa rápido dos arquivos.
+Embora descentralizado na comunicação, esse modelo dependia de **confiança estrita** nos nós (Servidores). Caso um servidor caísse após assumir o despacho de uma escolta, ocorriam impasses; se um operador fraudasse laudos locais, a rede validava sem auditoria criptográfica.
 
-## Visão geral
+A migração para a **Arquitetura Web3 (Blockchain)** substituiu o modelo distribuído de confiança acadêmica pelo paradigma "Don't Trust, Verify". O consenso distribuído agora é fornecido nativamente pela Ethereum Virtual Machine (EVM), que implementa as regras financeiras em Escrow, previne ataques bizantinos e serve como única fonte de verdade.
 
-O sistema separa infraestrutura de rede, consenso distribuído e operação:
+---
 
-- Servidores de setor em [servidor/](servidor) mantêm estado local, participam da malha P2P e coordenam despacho de drones.
-- Dashboard em [dashboard/](dashboard) monitora frota, telemetria e alertas, e também envia despacho manual.
-- Drones em [drone/](drone) registram-se no servidor e executam missões.
-- Radar em [radar_tcp/](radar_tcp) envia eventos críticos via TCP.
-- Telemetria em [sensor_tlm/](sensor_tlm) envia leituras contínuas via UDP.
+## 2. Arquitetura
 
-A arquitetura suporta um ou vários setores, com failover de cliente por lista de endereços (`SERVER_ADDRS`) e sincronização P2P entre servidores.
-
-## Como o sistema atua
-
-O fluxo principal é o seguinte:
-
-1. O sensor ou painel gera um evento.
-2. O servidor enfileira o alerta em uma fila com prioridade.
-3. Uma goroutine consumidora retira o próximo item da fila.
-4. O servidor inicia a exclusão mútua de Ricart-Agrawala.
-5. Quando o consenso é alcançado, o despacho é enviado ao drone local ou remoto.
-6. O gossip replica a frota entre setores e dashboards.
-
-Esse desenho evita perda de alerta quando o servidor está ocupado e permite separar entrada de eventos do processamento do despacho.
-
-## Arquitetura
-
-```mermaid
-flowchart LR
-    subgraph S1[SETOR A]
-        A[servidor_a]
-    end
-
-    subgraph S2[SETOR B]
-        B[servidor_b]
-    end
-
-    subgraph S3[SETOR C]
-        C[servidor_c]
-    end
-
-    D[dashboard]
-    R[radar_tcp]
-    T[sensor_tlm]
-    DR[drone]
-
-    A <--> B
-    B <--> C
-    C <--> A
-
-    D --> A
-    D --> B
-    D --> C
-
-    DR --> A
-    DR --> B
-    DR --> C
-
-    R --> A
-    R --> B
-    R --> C
-
-    T --> A
-    T --> B
-    T --> C
-```
-
-Notes:
-
-- O tráfego entre servidores usa a porta `48084/tcp`.
-- Os clientes usam `SERVER_ADDRS` para failover round-robin.
-
-## Componentes e papéis
-
-### Servidor
-- Recebe telemetria UDP na porta `48080`.
-- Recebe eventos TCP na porta `48081`.
-- Recebe drones na porta `48082`.
-- Recebe dashboard na porta `48083`.
-- Mantém a malha P2P na porta `48084`.
-- Coordena despacho com Ricart-Agrawala.
-- Usa fila de alertas com prioridade e starvation prevention.
-
-### Dashboard
-- Mantém conexão TCP com o servidor de setor.
-- Exibe frota global, telemetria e alertas.
-- Permite solicitar missão manual.
-- Faz failover automático entre servidores da lista.
-
-### Drone
-- Registra-se com `REG` e publica estado com `ACK`.
-- Recebe `CMD` de despacho e simula missão.
-- Faz failover automático entre servidores da lista.
-
-### Radar TCP
-- Publica eventos críticos com `EVT` via TCP.
-- Pode representar radar, AIS ou sensor químico.
-
-### Sensor TLM
-- Publica telemetria `TLM` via UDP.
-- Recria socket e alterna servidor em falha de envio.
-- Agora usa intervalo de 2 segundos para reduzir saturação.
-
-## Tecnologias utilizadas
-
-- Linguagem: Go 1.25.
-- Transporte: TCP e UDP.
-- Serialização: JSON.
-- Concorrência: goroutines, mutexes e `sync.Cond`.
-- Consenso distribuído: Ricart-Agrawala.
-- Sincronização de estado: gossip P2P.
-- Padrão de fluxo: producer-consumer.
-- Containerização: Docker.
-- Orquestração local: Docker Compose.
-
-## Algoritmos e mecanismos
-
-### Lamport
-O relógio lógico ordena eventos distribuídos e ajuda a comparar requisições entre setores.
-
-### Ricart-Agrawala
-Garante exclusão mútua entre setores para despacho de drones.
-
-### Gossip
-Replica o estado da frota entre servidores e dashboards para reduzir divergência de visão.
-
-### Producer-consumer
-Separa o recebimento de alertas do processamento de despacho, reduzindo perda em momentos de carga.
-
-### Fila com prioridade
-- Alerta crítico entra na fila crítica.
-- Alerta normal entra na fila normal.
-- Após 3 ciclos críticos, um alerta normal é promovido para evitar starvation.
-
-## Mensagens principais
-
-- `REG`: registro de componente.
-- `CMD`: comando de despacho.
-- `ACK`: confirmação e estado de drone.
-- `EVT`: evento crítico de sensor.
-- `TLM`: telemetria numérica.
-- `P2P_HELLO`: descoberta de vizinho.
-- `P2P_REQ`: pedido de exclusão mútua.
-- `P2P_CMD`: ordem remota de despacho.
-- `GOSSIP`: sincronização da frota.
-
-Campos usados no JSON, conforme o tipo:
-
-- `tipo`
-- `remetente`
-- `destino`
-- `relogio`
-- `acao`
-- `valor`
-- `posicao`
-- `frota`
-
-## Portas
-
-### Servidor por container
-
-| Protocolo | Porta | Uso |
-| --- | --- | --- |
-| UDP | 48080 | Entrada de telemetria |
-| TCP | 48081 | Entrada de eventos |
-| TCP | 48082 | Registro e controle de drones |
-| TCP | 48083 | Conexão do dashboard |
-| TCP | 48084 | Malha P2P entre servidores |
-
-### Exemplo de mapeamento no host
-
-| Setor | UDP 48080 | TCP 48081 | TCP 48082 | TCP 48083 |
-| --- | --- | --- | --- | --- |
-| A | 48080 | 48081 | 48082 | 48083 |
-| B | 8090 | 8091 | 8092 | 8093 |
-| C | 8100 | 8101 | 8102 | 8103 |
-
-## Resiliência e falhas
-
-1. Os clientes alternam automaticamente entre servidores de contingência.
-2. O `sensor_tlm` tenta o próximo servidor quando ocorre falha de `Write`.
-3. As conexões TCP usam keepalive para reduzir conexões zumbis.
-4. O gossip mantém a visão da frota convergente entre setores.
-5. A exclusão mútua evita disputa concorrente por drones.
-6. Em degradação parcial, o sistema continua operando pelos setores restantes.
-
-## Estrutura do projeto
+O ecossistema é fracionado em três camadas isoladas, interagindo unicamente pelo registro imutável da Blockchain:
 
 ```text
-.
-├── docker-compose.yml
-├── README.md
-├── REFACTORING_README.md
-├── REFACTORING_SUMMARY.md
-├── MODULARIZATION_CHANGELOG.md
-├── CODE_REVIEW_GUIDE.md
-├── TESTING_GUIDE_v2.md
-├── FINAL_REPORT.md
-├── FILE_INDEX.txt
-├── arquivos_sh/
-├── dashboard/
-├── drone/
-├── radar_tcp/
-├── sensor_tlm/
-└── servidor/
+  [ CLIENTE (Empresa TS) ]        [ HARDWARE (Drone) ]
+         |                                  ^
+  1. Compra Escolta                         | 4. Comando Físico
+  2. Paga OPC                               |
+         |                                  |
+         v                                  |
+ [ BLOCKCHAIN (Smart Contract) ] --\        |
+         |                         |        |
+         | (Evento Emitido)        | 3. Detecta evento Web3
+         v                         |
+ [ ORACLE GO (Servidor Borda) ] ---/
+         |
+  5. Conclui Escolta
+  6. Emite Laudo On-chain
 ```
 
-## Como executar
+- **Camada 1 - Blockchain (Hardhat + Solidity)**: Gerencia saldos de tokens (OPC), retém fundos durante missões e cobra reembolsos por timeout.
+- **Camada 2 - Servidor Oracle (Go)**: Uma ponte entre Web3 e o Mundo Real (IoT). Escuta a rede EVM, comanda os drones locais fisicamente e atesta conclusões enviando laudos assinados para a Blockchain.
+- **Camada 3 - Cliente CLI (TypeScript)**: Painel tático das empresas de navegação. Permite requisitar serviços, monitorar auditoria real-time e exigir reembolsos caso o consórcio falhe.
 
-### Com Docker Compose
+---
+
+## 3. Modelo de Segurança
+
+A solidez do sistema é mantida por cinco pilares integrados no contrato inteligente `OrmuzConsortium.sol`:
+
+- **Escrow (Custódia Automática)**: Os tokens (pagamento da escolta) não vão diretamente para o consórcio. Eles ficam retidos em garantia (Escrow) dentro do contrato assim que a missão é iniciada.
+- **Auditoria Imutável**: O servidor Go não altera o estado da missão manipulando variáveis, mas sim executando a transação `registrarLaudo` registrada eternamente na Blockchain com hashes únicos.
+- **Timeout**: Missões recebem uma contagem regressiva em blocos. O consórcio precisa entregar o laudo antes que a janela de tempo se esgote.
+- **Reembolso**: Caso o Drone caia no mar, ou o Servidor perca energia, a missão não será concluída a tempo. O Cliente CLI tem o direito irrevogável de chamar `reclamarReembolso` para recuperar 100% dos fundos de missões expiradas.
+- **Tolerância a Falhas Bizantinas**: Ao unir *Escrow* e *Timeout*, a Blockchain elimina a necessidade de confiar no consórcio. Se o servidor agir de forma bizantina (pegar o laudo falso ou reter fundos e não mandar o drone), a matemática do *Timeout* sempre garante o dinheiro de volta ao cliente. Não é possível faturar missões não concluídas.
+
+---
+
+## 4. Pré-Requisitos
+
+Para execução local, recomenda-se:
+* **Node.js 22.x+**
+* **Go 1.21+**
+* **Docker & Docker Compose**
+
+---
+
+## 5. Execução Manual (Demonstração da Banca)
+
+Para rodar todos os painéis e o Simulador Interativo, abra 4 janelas do terminal.
+
+**Terminal 1 — Sobe a Blockchain**
+```bash
+cd blockchain
+npm install
+npx hardhat node
+```
+
+**Terminal 2 — Instancia os Contratos**
+```bash
+cd blockchain
+npx hardhat ignition deploy ignition/modules/OrmuzConsortium.ts --network localhost
+```
+
+**Terminal 3 — Servidor Oracle Go (O "Cérebro" IoT)**
+```bash
+cd servidor
+go build ./...
+go run main.go types.go queue.go listeners.go
+```
+*(Opcional: Subir um drone simulado manual executando `cd drone && go run main.go` em outra janela)*
+
+**Terminal 4 — Cliente CLI Web3 (Console Empresa)**
+```bash
+cd client_cli
+npm install
+# Para operar manualmente o menu (Caminho Feliz)
+npm run start
+# Para demonstração automática com Cenários Bizantinos e Falhas
+npm run simulate
+```
+
+---
+
+## 6. Execução Docker (Avaliação Rápida)
+
+Para subir o cluster backend inteiro (`Hardhat Node` + `Oracle Go` + `2 Drones`) com apenas um comando:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
-
-### Manual por setor
-
-```bash
-NOME_SETOR=SETOR_NORTE ./arquivos_sh/run_servidor.sh
-```
-
-Variáveis úteis:
-
-- `NOME_SETOR`
-- `PEERS`
-- `SERVER_ADDRS`
-
-## Testes de stress
-
-Os scripts em `arquivos_sh/` simulam carga com imagens Docker Hub.
-
-Scripts disponíveis:
-
-- `arquivos_sh/stress_sensores.sh`
-- `arquivos_sh/stress_atuadores.sh`
-- `arquivos_sh/stress_clientes.sh`
-- `arquivos_sh/cleanup.sh`
-
-## Comandos úteis
-
+Verificar status e logs:
 ```bash
 docker compose ps
-docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-docker compose down
+docker compose logs -f
 ```
 
-## Fluxo de documentação
-
-Se quiser entender o projeto em camadas, a ordem mais útil é:
-
-1. Ler esta README para visão geral.
-2. Abrir [docs/README.md](docs/README.md) para navegar pela documentação técnica.
-3. Ler [docs/REFACTORING_README.md](docs/REFACTORING_README.md) para o índice da refatoração.
-4. Ler [docs/MODULARIZATION_CHANGELOG.md](docs/MODULARIZATION_CHANGELOG.md) para a arquitetura.
-5. Consultar [docs/TESTING_GUIDE_v2.md](docs/TESTING_GUIDE_v2.md) para validação.
-6. Usar [docs/CODE_REVIEW_GUIDE.md](docs/CODE_REVIEW_GUIDE.md) para entender o código por módulo.
-
-## Observação sobre documentação oficial
-
-Sim, essa separação é comum em documentação oficial: uma página principal curta e estável, e páginas auxiliares por tema, como arquitetura, testes, release notes e guia de revisão. É exatamente o que este repositório agora segue.
+*O Client CLI (`client_cli/simulador.ts`) deve ser executado no terminal da sua máquina (fora do Docker) apontando para o `localhost:8545` normalmente, validando a integração entre mundo exterior e cluster Docker.*
 
 ---
 
-## Build & Push de imagens (Docker)
+## 7. Execução Distribuída
 
-Os seguintes comandos constavam em scripts auxiliares; incluí aqui para facilitar workflows de laboratório.
+Na Faculdade, caso queira rodar em máquinas reais distintas (Ex: Aluno A roda Servidor e Blockchain; Aluno B roda o Cliente CLI pedindo as escoltas):
 
-Build das imagens (na raiz deste repositório):
+No **Aluno A** (Servidor):
+- Suba a blockchain e libere as portas na rede.
 
+No **Aluno B** (Cliente CLI):
+- Modifique a variável de conexão no Node:
 ```bash
-docker build -t cleidsonramos/servidor:latest ./servidor
-docker build -t cleidsonramos/dashboard:latest ./dashboard
-docker build -t cleidsonramos/sensor_tlm:latest ./sensor_tlm
-docker build -t cleidsonramos/radar_tcp:latest ./radar_tcp
-docker build -t cleidsonramos/drone:latest ./drone
+export BLOCKCHAIN_RPC="ws://[IP_DO_ALUNO_A]:8545"
+npm run start
 ```
-
-Push (envie para seu registry):
-
-```bash
-docker push cleidsonramos/servidor:latest
-docker push cleidsonramos/dashboard:latest
-docker push cleidsonramos/sensor_tlm:latest
-docker push cleidsonramos/radar_tcp:latest
-docker push cleidsonramos/drone:latest
-```
-
----
-
-## Observacoes finais
-
-- Para ambiente de apresentacao com multiplas maquinas, prefira IP fixo e porta padronizada por setor.
-- Se quiser validar apenas um caminho, comece por: `servidor + drone + radar + dashboard`.
-- Em cenarios com perda de no, verifique logs de reconexao e de gossip para confirmar convergencia.
+O contrato inteligente `OrmuzConsortium` garante que ambos observarão a mesma transação no mesmo hash instantaneamente.

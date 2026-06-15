@@ -7,7 +7,7 @@ import path from "path";
 const ARTIFACT_PATH = path.resolve(process.cwd(), "../blockchain/artifacts/contracts/OrmuzConsortium.sol/OrmuzConsortium.json");
 
 // Endereço do contrato implantado localmente (Padrão inicial do Hardhat - você pode alterar se necessário)
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3"; 
 
 async function main() {
     console.log("==================================================");
@@ -23,8 +23,9 @@ async function main() {
     const artifact = JSON.parse(fs.readFileSync(ARTIFACT_PATH, "utf8"));
 
     // Conectando ao Hardhat Node Local
-    console.log("[*] Conectando à Blockchain Local (http://127.0.0.1:8545)...");
-    const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
+    const rpcUrl = process.env.BLOCKCHAIN_RPC || "http://127.0.0.1:8545";
+    console.log(`[*] Conectando à Blockchain Local (${rpcUrl})...`);
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
 
     try {
         await provider.getNetwork();

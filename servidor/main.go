@@ -40,6 +40,13 @@ func main() {
 		}
 	}
 
+	if envRPC := os.Getenv("BLOCKCHAIN_RPC"); envRPC != "" {
+		cfg.BlockchainRPC = envRPC
+	}
+	if envContract := os.Getenv("CONTRACT_ADDRESS"); envContract != "" {
+		cfg.ContractAddress = envContract
+	}
+
 	gs := NewGlobalState(meuSetor, cfg, 100, 3)
 
 	if err := InitBlockchain(gs); err != nil {

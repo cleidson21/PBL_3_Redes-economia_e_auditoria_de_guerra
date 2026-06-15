@@ -1,100 +1,61 @@
 services:
-  servidor_a:
+  blockchain:
+    build: ./blockchain
+    container_name: ormuz_blockchain
+    ports:
+      - "8545:8545"
+    networks:
+      - rede_ormuz
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8545"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: always
+
+  servidor_go:
     build: ./servidor
-    container_name: servidor_ormuz_a
+    container_name: ormuz_oracle
+    depends_on:
+      blockchain:
+        condition: service_healthy
     environment:
-      MEU_SETOR: SETOR_A
+      MEU_SETOR: SETOR_01
+      BLOCKCHAIN_RPC: ws://blockchain:8545
+      CONTRACT_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3" # Endereço padrão Hardhat Local (ajustável no deploy real)
     networks:
       - rede_ormuz
     ports:
       - "48080:48080/udp"
       - "48081:48081/tcp"
       - "48082:48082/tcp"
-      - "48083:48083/tcp"
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  servidor_b:
-    build: ./servidor
-    container_name: servidor_ormuz_b
-    environment:
-      MEU_SETOR: SETOR_B
-    networks:
-      - rede_ormuz
-    ports:
-      - "48090:48080/udp"
-      - "48091:48081/tcp"
-      - "48092:48082/tcp"
-      - "48093:48083/tcp"
-    restart: always
-
-  servidor_c:
-    build: ./servidor
-    container_name: servidor_ormuz_c
-    environment:
-      MEU_SETOR: SETOR_C
-    networks:
-      - rede_ormuz
-    ports:
-      - "48100:48080/udp"
-      - "48101:48081/tcp"
-      - "48102:48082/tcp"
-      - "48103:48083/tcp"
-    restart: always
-
-  dashboard:
-    build: ./dashboard
-    container_name: dashboard_operador
-    depends_on:
-      - servidor_a
-      - servidor_b
-      - servidor_c
-    environment:
-      SERVER_ADDRS: servidor_a:48083,servidor_b:48083,servidor_c:48083
-    networks:
-      - rede_ormuz
-    stdin_open: true
-    tty: true
-    restart: always
-
-  drone:
+  drone_1:
     build: ./drone
-    container_name: drone_01
+    container_name: drone_alfa
     depends_on:
-      - servidor_a
-      - servidor_b
-      - servidor_c
+      - servidor_go
     environment:
-      SERVER_ADDRS: servidor_a:48082,servidor_b:48082,servidor_c:48082
-      DRONE_ID: DRONE_01
+      SERVER_ADDR: servidor_go:48082
+      DRONE_ID: DRONE_ALFA
     networks:
       - rede_ormuz
     restart: always
 
-  radar_tcp:
-    build: ./radar_tcp
-    container_name: radar_tcp_01
+  drone_2:
+    build: ./drone
+    container_name: drone_beta
     depends_on:
-      - servidor_a
-      - servidor_b
-      - servidor_c
+      - servidor_go
     environment:
-      SERVER_ADDRS: servidor_a:48081,servidor_b:48081,servidor_c:48081
-      SENSOR_ID: RADAR_01
-      SENSOR_TIPO: RADAR
-    networks:
-      - rede_ormuz
-    restart: always
-
-  sensor_tlm:
-    build: ./sensor_tlm
-    container_name: sensor_tlm_01
-    depends_on:
-      - servidor_a
-      - servidor_b
-      - servidor_c
-    environment:
-      SERVER_ADDRS: servidor_a:48080,servidor_b:48080,servidor_c:48080
-      SENSOR_ID: BOIA_01
+      SERVER_ADDR: servidor_go:48082
+      DRONE_ID: DRONE_BETA
     networks:
       - rede_ormuz
     restart: always
@@ -102,4 +63,3 @@ services:
 networks:
   rede_ormuz:
     driver: bridge
-    
