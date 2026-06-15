@@ -5,7 +5,7 @@ services:
     ports:
       - "8545:8545"
     networks:
-      - rede_ormuz
+      - ormuz_web3_net
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8545"]
       interval: 5s
@@ -13,18 +13,18 @@ services:
       retries: 5
     restart: always
 
-  servidor_go:
-    build: ./servidor
-    container_name: ormuz_oracle
+  companhia_go:
+    image: <dockerhub-usuario>/companhia_oracle:latest
+    container_name: companhia_principal
     depends_on:
       blockchain:
         condition: service_healthy
     environment:
-      MEU_SETOR: SETOR_01
       BLOCKCHAIN_RPC: ws://blockchain:8545
-      CONTRACT_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3" # Endereço padrão Hardhat Local (ajustável no deploy real)
+      CONTRACT_ADDRESS: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+      MEU_SETOR: SETOR_PRINCIPAL
     networks:
-      - rede_ormuz
+      - ormuz_web3_net
     ports:
       - "48080:48080/udp"
       - "48081:48081/tcp"
@@ -37,29 +37,29 @@ services:
         max-file: "3"
 
   drone_1:
-    build: ./drone
-    container_name: drone_alfa
+    image: <dockerhub-usuario>/drone_patrulha:latest
+    container_name: drone_patrulha_1
     depends_on:
-      - servidor_go
+      - companhia_go
     environment:
-      SERVER_ADDR: servidor_go:48082
+      SERVER_ADDR: companhia_principal:48082
       DRONE_ID: DRONE_ALFA
     networks:
-      - rede_ormuz
+      - ormuz_web3_net
     restart: always
 
   drone_2:
-    build: ./drone
-    container_name: drone_beta
+    image: <dockerhub-usuario>/drone_patrulha:latest
+    container_name: drone_patrulha_2
     depends_on:
-      - servidor_go
+      - companhia_go
     environment:
-      SERVER_ADDR: servidor_go:48082
+      SERVER_ADDR: companhia_principal:48082
       DRONE_ID: DRONE_BETA
     networks:
-      - rede_ormuz
+      - ormuz_web3_net
     restart: always
 
 networks:
-  rede_ormuz:
+  ormuz_web3_net:
     driver: bridge
