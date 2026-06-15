@@ -32,19 +32,7 @@ func EnriquecerIdentidade(gs *GlobalState, id string) string {
 	return id
 }
 
-// AtualizarDashboards replica um evento para todos os dashboards conectados sem bloquear a produção principal.
-func AtualizarDashboards(gs *GlobalState, msg Mensagem) {
-	payload, err := json.Marshal(msg)
-	if err != nil {
-		return
-	}
 
-	gs.DashboardsMu.RLock()
-	defer gs.DashboardsMu.RUnlock()
-	for conn := range gs.Dashboards {
-		fmt.Fprintf(conn, "%s\n", payload)
-	}
-}
 
 func registrarEstadoDrone(gs *GlobalState, droneID string, estado EstadoDrone) {
 	if estado.SeenAt == 0 {
@@ -117,7 +105,6 @@ func ListenSensoresTLM(gs *GlobalState) {
 			}
 		}
 
-		AtualizarDashboards(gs, msg)
 	}
 }
 
@@ -149,7 +136,6 @@ func ListenRadarTCP(gs *GlobalState) {
 				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
 
 				if msg.Tipo == "EVT" && msg.Acao == "ALERTA" {
-					AtualizarDashboards(gs, msg)
 					if !gs.AlertQueue.EnqueueAlert(gs, msg.Posicao, 2, "") {
 						fmt.Printf("⚠️ [%s] Alerta crítico rejeitado por fila cheia: %s\n", msg.Remetente, msg.Posicao)
 					}
@@ -236,7 +222,6 @@ func ListenDrones(gs *GlobalState) {
 							}
 						}
 						gs.FrotaMu.Unlock()
-						AtualizarDashboards(gs, msg)
 					} else {
 						gs.FrotaMu.Unlock()
 					}
@@ -262,53 +247,7 @@ func ListenDrones(gs *GlobalState) {
 	}
 }
 
-// ListenDashboardTCP recebe comandos do operador e mantém a conexão viva enquanto o dashboard estiver ativo.
-func ListenDashboardTCP(gs *GlobalState) {
-	listener, err := net.Listen("tcp", ":48083")
-	if err != nil {
-		fmt.Printf("❌ [%s] Erro ao abrir porta TCP 48083: %v\n", gs.MeuNamespace, err)
-		return
-	}
-	defer listener.Close()
 
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			continue
-		}
-		HabilitarKeepAlive(conn)
-
-		gs.DashboardsMu.Lock()
-		gs.Dashboards[conn] = true
-		gs.DashboardsMu.Unlock()
-
-		go func(c net.Conn) {
-			defer func() {
-				gs.DashboardsMu.Lock()
-				delete(gs.Dashboards, c)
-				gs.DashboardsMu.Unlock()
-				c.Close()
-			}()
-
-			scanner := bufio.NewScanner(c)
-			for scanner.Scan() {
-				var msg Mensagem
-				if err := json.Unmarshal(scanner.Bytes(), &msg); err != nil {
-					continue
-				}
-
-				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
-
-				if msg.Tipo == "CMD" && msg.Acao == "REQUISICAO_MANUAL" {
-					fmt.Printf("👨‍💻 Operador solicitou inspeção manual para: %s\n", msg.Posicao)
-					if !gs.AlertQueue.EnqueueAlert(gs, msg.Posicao, 1, "") {
-						fmt.Printf("⚠️ [%s] Alerta manual rejeitado por fila cheia: %s\n", msg.Remetente, msg.Posicao)
-					}
-				}
-			}
-		}(conn)
-	}
-}
 
 // LimparFrotaExpirada remove drones sem atualização recente para evitar registros fantasmas após failover.
 func LimparFrotaExpirada(gs *GlobalState, ttl time.Duration) {

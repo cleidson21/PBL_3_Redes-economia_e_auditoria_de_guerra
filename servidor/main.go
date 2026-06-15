@@ -24,36 +24,6 @@ func LoadConfig(path string) (*Config, error) {
 	return &cfg, nil
 }
 
-// RotinaGossip replica periodicamente o estado da frota local para os dashboards conectados.
-func RotinaGossip(gs *GlobalState) {
-	for {
-		time.Sleep(5 * time.Second)
-
-		gs.FrotaMu.RLock()
-		if len(gs.FrotaGlobal) == 0 {
-			gs.FrotaMu.RUnlock()
-			continue
-		}
-		copiaFrota := make(map[string]EstadoDrone)
-		for k, v := range gs.FrotaGlobal {
-			copiaFrota[k] = v
-		}
-		gs.FrotaMu.RUnlock()
-
-		msgGossip := Mensagem{
-			Tipo:      "GOSSIP",
-			Remetente: gs.MeuSetor,
-			Frota:     copiaFrota,
-		}
-		payload, _ := json.Marshal(msgGossip)
-
-		gs.DashboardsMu.RLock()
-		for conn := range gs.Dashboards {
-			fmt.Fprintf(conn, "%s\n", payload)
-		}
-		gs.DashboardsMu.RUnlock()
-	}
-}
 
 func main() {
 	meuSetor := os.Getenv("MEU_SETOR")
@@ -85,9 +55,6 @@ func main() {
 	go ListenSensoresTLM(gs)
 	go ListenRadarTCP(gs)
 	go ListenDrones(gs)
-	go ListenDashboardTCP(gs)
-
-	go RotinaGossip(gs)
 
 	gs.AlertQueue.StartConsumer(gs)
 

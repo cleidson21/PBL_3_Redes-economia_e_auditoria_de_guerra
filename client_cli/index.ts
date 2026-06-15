@@ -63,7 +63,7 @@ async function main() {
 
     // ==== Listeners ====
     // Captura eventos direcionados à nossa carteira sem travar a interface!
-    ormuzClient.on("MissionCompleted", (missionId, reporter, amount, event) => {
+    ormuzClient.on("MissionCompleted", (missionId: any, reporter: any, amount: any, event: any) => {
         // Formatar para terminal (Pula linha do readline e mostra alerta)
         process.stdout.write("\n\n🔔 [ALERTA DA BLOCKCHAIN] ==========================\n");
         process.stdout.write(`🚁 Laudo Registrado pelo Drone (Reporter: ${reporter})\n`);
@@ -72,7 +72,7 @@ async function main() {
         process.stdout.write("=====================================================\n> ");
     });
 
-    ormuzClient.on("RefundIssued", (missionId, client, amount, event) => {
+    ormuzClient.on("RefundIssued", (missionId: any, client: any, amount: any, event: any) => {
         if (client.toLowerCase() === clientAddress.toLowerCase()) {
             process.stdout.write("\n\n🔔 [ALERTA DA BLOCKCHAIN] ==========================\n");
             process.stdout.write(`❌ Timeout Bizantino Detectado para a Missão ${missionId}!\n`);

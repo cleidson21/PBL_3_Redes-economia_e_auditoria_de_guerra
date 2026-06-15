@@ -19,7 +19,6 @@ type Mensagem struct {
 	Valor      string                 `json:"valor,omitempty"`
 	Posicao    string                 `json:"posicao,omitempty"`
 	Frota      map[string]EstadoDrone `json:"frota,omitempty"`
-	// Relogio int `json:"relogio,omitempty"` // Removido do modelo PBL 2
 }
 
 // EstadoDrone descreve o estado atual conhecido de um drone na frota local.
@@ -37,7 +36,6 @@ type Alert struct {
 	Timestamp     int64
 	ID            string
 	StarveCounter int
-	// Lamport int // Removido do modelo PBL 2
 }
 
 // AlertQueue gerencia filas separadas de prioridade com prevenção de starvation.
@@ -76,8 +74,6 @@ type GlobalState struct {
 	Sensores     map[string]*net.UDPAddr
 	DronesMu     sync.RWMutex
 	DronesLocais map[string]net.Conn
-	DashboardsMu sync.RWMutex
-	Dashboards   map[net.Conn]bool
 
 	FrotaMu     sync.RWMutex
 	FrotaGlobal map[string]EstadoDrone
@@ -95,7 +91,6 @@ func NewGlobalState(meuSetor string, cfg *Config, maxQueueSize, starveThreshold 
 		Radares:       make(map[string]net.Conn),
 		Sensores:      make(map[string]*net.UDPAddr),
 		DronesLocais:  make(map[string]net.Conn),
-		Dashboards:    make(map[net.Conn]bool),
 		FrotaGlobal:   make(map[string]EstadoDrone),
 	}
 

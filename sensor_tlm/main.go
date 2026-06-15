@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"net"
 	"os"
-	"strings"
 	"time"
 )
 
@@ -29,18 +28,11 @@ type EstadoDrone struct {
 }
 
 func main() {
-	addrVars := os.Getenv("SERVER_ADDRS")
-	if addrVars == "" {
-		addrVars = os.Getenv("SERVER_ADDR")
+	addrAtual := os.Getenv("SERVER_ADDR")
+	if addrAtual == "" {
+		addrAtual = "localhost:48080"
 	}
-	if addrVars == "" {
-		addrVars = "localhost:48080"
-	}
-	listaServidores := strings.Split(addrVars, ",")
-	idxServidor := 0
-
 	var conn *net.UDPConn
-	addrAtual := ""
 
 	sensorID := os.Getenv("SENSOR_ID")
 	if sensorID == "" {
@@ -64,10 +56,8 @@ func main() {
 	}
 
 	for {
-		addrAtual = strings.TrimSpace(listaServidores[idxServidor])
 		if err := conectarUDP(addrAtual); err != nil {
-			fmt.Printf("⚠️ Falha ao ligar ao servidor UDP %s. A tentar o próximo em 3s... (%v)\n", addrAtual, err)
-			idxServidor = (idxServidor + 1) % len(listaServidores)
+			fmt.Printf("⚠️ Falha ao ligar ao servidor UDP %s. Retentando em 3s... (%v)\n", addrAtual, err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -127,8 +117,6 @@ func main() {
 		fmt.Printf("📤 Enviando JSON -> %s\n", payload)
 
 		if conn == nil {
-			idxServidor = (idxServidor + 1) % len(listaServidores)
-			addrAtual = strings.TrimSpace(listaServidores[idxServidor])
 			if err := conectarUDP(addrAtual); err != nil {
 				fmt.Printf("⚠️ Falha ao reconectar no servidor UDP %s: %v\n", addrAtual, err)
 			}
@@ -138,10 +126,8 @@ func main() {
 
 		_, err := conn.Write(payload)
 		if err != nil {
-			fmt.Printf("⚠️ Erro de envio para %s: %v. Alternando servidor de contingência...\n", addrAtual, err)
+			fmt.Printf("⚠️ Erro de envio para %s: %v. Tentando reconectar...\n", addrAtual, err)
 
-			idxServidor = (idxServidor + 1) % len(listaServidores)
-			addrAtual = strings.TrimSpace(listaServidores[idxServidor])
 			if errCon := conectarUDP(addrAtual); errCon != nil {
 				fmt.Printf("⚠️ Falha ao reconectar no servidor UDP %s: %v\n", addrAtual, errCon)
 			}

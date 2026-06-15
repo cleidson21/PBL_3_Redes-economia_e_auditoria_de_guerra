@@ -66,24 +66,15 @@ func main() {
 		droneID = "DRONE_01"
 	}
 
-	addrVars := os.Getenv("SERVER_ADDRS")
-	if addrVars == "" {
-		addrVars = os.Getenv("SERVER_ADDR")
+	addr := os.Getenv("SERVER_ADDR")
+	if addr == "" {
+		addr = "localhost:48082"
 	}
-	if addrVars == "" {
-		addrVars = "localhost:48082"
-	}
-
-	listaServidores := strings.Split(addrVars, ",")
-	idxServidor := 0
 
 	for {
-		addr := strings.TrimSpace(listaServidores[idxServidor])
-
 		conn, err := net.Dial("tcp", addr)
 		if err != nil {
-			fmt.Printf("⚠️ Falha ao ligar ao servidor %s. A tentar o próximo em 3s... (%v)\n", addr, err)
-			idxServidor = (idxServidor + 1) % len(listaServidores)
+			fmt.Printf("⚠️ Falha ao ligar ao servidor %s. Retentando em 3s... (%v)\n", addr, err)
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -98,7 +89,6 @@ func main() {
 		}); err != nil {
 			fmt.Printf("⚠️ Falha ao registar o drone: %v\n", err)
 			conn.Close()
-			idxServidor = (idxServidor + 1) % len(listaServidores)
 			time.Sleep(3 * time.Second)
 			continue
 		}
@@ -196,8 +186,7 @@ func main() {
 			fmt.Printf("⚠️ Ligação com o servidor interrompida: %v\n", err)
 		}
 		conn.Close()
-		fmt.Println("❌ Ligação perdida. Alternando para o próximo servidor de contingência...")
-		idxServidor = (idxServidor + 1) % len(listaServidores)
+		fmt.Println("❌ Ligação perdida. Tentando reconectar...")
 		time.Sleep(3 * time.Second)
 	}
 }

@@ -6,15 +6,7 @@ import (
 	"time"
 )
 
-// EnviarEventoRequisicao replica o estado da requisição para os dashboards conectados.
-func EnviarEventoRequisicao(gs *GlobalState, id string, status string, prioridade int) {
-	AtualizarDashboards(gs, Mensagem{
-		Tipo:       "REQ_UPDATE",
-		Remetente:  id,
-		Acao:       status,
-		Prioridade: prioridade,
-	})
-}
+
 
 // ExecutarDespacho escolhe um drone livre local e encaminha o comando de despacho.
 func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, prioridade int) {
@@ -71,7 +63,6 @@ func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, p
 			gs.FrotaMu.Unlock()
 		} else {
 			fmt.Printf("🎯 [DESPACHO LOCAL] Alvo: %s | Drone: %s (P:%d)\n", coordenada, droneEscolhido, prioridade)
-			EnviarEventoRequisicao(gs, requisicaoID, "EXECUTED", prioridade)
 		}
 	} else {
 		fmt.Printf("⚠️ Drone local %s não está conectado em DronesLocais!\n", droneEscolhido)
@@ -117,7 +108,6 @@ func (aq *AlertQueue) EnqueueAlert(gs *GlobalState, coordenada string, prioridad
 		fmt.Printf("📥 Alerta NORMAL enfileirado para: %s | Fila normal: %d\n", coordenada, len(aq.normal))
 	}
 
-	EnviarEventoRequisicao(gs, alert.ID, "ENQUEUED", alert.Prioridade)
 	aq.notEmpty.Signal()
 	return true
 }
