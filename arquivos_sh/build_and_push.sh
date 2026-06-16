@@ -3,6 +3,9 @@
 # Abortar imediatamente em caso de erro
 set -e
 
+# Vai para a raiz do projeto para que os caminhos como ./blockchain funcionem corretamente
+cd "$(dirname "$0")/.."
+
 # O usuário deve passar o nome de usuário do Docker Hub como argumento ou variável de ambiente
 DOCKER_USER=${1:-"cleidsonramos"}
 
