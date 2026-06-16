@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { buscarMissao } from "../services/web3";
-import { Mission } from "../types/mission";
+import type { Mission } from "../types/mission";
 import { ArrowLeft, Loader2, ShieldCheck, User, Clock, AlertTriangle, FileText } from "lucide-react";
 
 export function Audit() {

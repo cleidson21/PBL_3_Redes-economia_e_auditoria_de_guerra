@@ -12,14 +12,18 @@ import (
 func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, prioridade int) {
 	var droneEscolhido string
 
-	gs.FrotaMu.RLock()
+	gs.FrotaMu.Lock()
 	for id, estado := range gs.FrotaGlobal {
 		if estado.Status == "LIVRE" && estado.Setor == gs.MeuSetor {
 			droneEscolhido = id
+			estado.Status = "EM_MISSAO"
+			estado.MissionId = requisicaoID
+			estado.SeenAt = time.Now().UnixNano()
+			gs.FrotaGlobal[id] = estado
 			break
 		}
 	}
-	gs.FrotaMu.RUnlock()
+	gs.FrotaMu.Unlock()
 
 	if droneEscolhido == "" {
 		if ok := gs.AlertQueue.EnqueueAlert(gs, coordenada, prioridade, requisicaoID); !ok {
@@ -28,15 +32,6 @@ func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, p
 		fmt.Printf("⚠️ [RACE CONDITION] Sem drones livres locais. Re-enfileirando alerta (%s).\n", coordenada)
 		return
 	}
-
-	gs.FrotaMu.Lock()
-	if estado, ok := gs.FrotaGlobal[droneEscolhido]; ok {
-		estado.Status = "EM_MISSAO"
-		estado.MissionId = requisicaoID
-		estado.SeenAt = time.Now().UnixNano()
-		gs.FrotaGlobal[droneEscolhido] = estado
-	}
-	gs.FrotaMu.Unlock()
 
 	gs.DronesMu.RLock()
 	connDrone, ok := gs.DronesLocais[droneEscolhido]

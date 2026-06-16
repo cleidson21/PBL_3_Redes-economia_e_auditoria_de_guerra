@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Mission } from "../types/mission";
+import type { Mission } from "../types/mission";
 import { listarMissoes } from "../services/web3";
 
 export function useMissions() {

@@ -5,19 +5,22 @@ const OrmuzConsortiumModule = buildModule("OrmuzConsortiumModule", (m) => {
   const deployer = m.getAccount(0);
 
   // Fazemos o deploy do contrato
-  // Não há argumentos no construtor do OrmuzConsortium
   const ormuzConsortium = m.contract("OrmuzConsortium", [], {
     from: deployer,
   });
 
-  // O deployer já recebe as roles MINTER_ROLE e DEFAULT_ADMIN_ROLE pelo construtor.
-  // Conforme o requisito e a dica, faremos a emissão de 10.000 OPC (usando 18 casas decimais).
-  const mintAmount = m.getParameter("mintAmount", 10000n * 10n ** 18n);
+  // Quantidade inicial em tokens definida via variável de ambiente (padrão 50 OPC)
+  const initialAmountStr = process.env.INITIAL_OPC_PER_ACCOUNT || "50";
+  const mintAmount = m.getParameter("mintAmount", BigInt(initialAmountStr) * 10n ** 18n);
 
-  // A função mint é chamada diretamente após a publicação
-  m.call(ormuzConsortium, "mint", [deployer, mintAmount], {
-    from: deployer,
-  });
+  // Distribuir o saldo inicial para as 10 primeiras contas de teste do Hardhat
+  for (let i = 0; i < 10; i++) {
+    const account = m.getAccount(i);
+    m.call(ormuzConsortium, "mint", [account, mintAmount], {
+      from: deployer,
+      id: `mint_initial_opc_${i}`,
+    });
+  }
 
   return { ormuzConsortium };
 });

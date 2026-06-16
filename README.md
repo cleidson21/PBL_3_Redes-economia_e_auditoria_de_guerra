@@ -10,7 +10,7 @@ A arquitetura do projeto é segregada em componentes estritos e especializados:
 
 * **Blockchain (EVM):** Ambiente de liquidação contínua que garante a custódia das transações e dita o estado global do sistema de forma imutável.
 * **Smart Contracts:** Regras de negócio programadas em Solidity que implementam o bloqueio de fundos e a cobrança automática de prazos operativos.
-* **Cliente CLI:** Interface tática interativa construída em TypeScript que permite às empresas logísticas contratar escoltas, acompanhar eventos on-chain e exigir o ressarcimento financeiro em casos de inatividade.
+* **Painel Web (Frontend):** Interface tática interativa construída em React/TypeScript que permite às empresas logísticas contratar escoltas, acompanhar eventos on-chain e exigir o ressarcimento financeiro em casos de inatividade.
 * **Companhia Oracle:** Servidor operacional desenvolvido em Go. Atua primariamente como uma ponte de leitura/escrita, extraindo ordens validadas da Blockchain para emitir despachos para as frotas reais.
 * **Drones Patrulha:** Atuadores de borda responsáveis por receber instruções exclusivas da Companhia Oracle e reportar *Acknowledge* (ACK) de conclusão de patrulhamento no domínio físico.
 
@@ -18,7 +18,7 @@ A arquitetura do projeto é segregada em componentes estritos e especializados:
 
 O ciclo de vida completo de uma operação naval transcorre nas seguintes etapas:
 
-1. **Contratação:** A empresa utiliza o Cliente CLI para requisitar a escolta, pagando a taxa estipulada no token nativo da rede (OPC).
+1. **Contratação:** A empresa utiliza o Painel Web para requisitar a escolta, pagando a taxa estipulada no token nativo da rede (OPC). Todas as carteiras conectadas iniciam com 50 OPC por padrão.
 2. **Escrow (Bloqueio):** O Smart Contract recebe e bloqueia os OPCs internamente, recusando-se a repassar os fundos imediatamente à prestadora do serviço.
 3. **Emissão de Evento:** A Blockchain emite um evento criptográfico anunciando globalmente o requerimento de escolta.
 4. **Captura:** A Companhia Oracle capta o evento assíncrono oriundo da Blockchain.
@@ -32,7 +32,7 @@ O diagrama a seguir exibe o fluxo de comunicação de sentido único e retorno o
 
 ```mermaid
 graph TD
-    A[Cliente CLI] -->|1. Solicita e Paga OPC| B[(Blockchain EVM)]
+    A[Painel Web] -->|1. Solicita e Paga OPC| B[(Blockchain EVM)]
     B -->|2. Evento Escolta Solicita| C{Companhia Oracle}
     C -->|3. Comando IoT| D[Drone Patrulha]
     D -.->|4. Missão Concluída| C
@@ -56,11 +56,11 @@ A rede utiliza paradigmas de proteção rigorosos contra falhas de infraestrutur
 ```text
 ormuz/
 ├── blockchain/      # Ambiente Hardhat, Smart Contracts (Solidity) e scripts de Deploy.
-├── client_cli/      # Aplicação TS (Dashboard da Empresa) e Simulador automatizado.
+├── frontend-web/    # Aplicação em React/Vite (Dashboard da Empresa).
 ├── servidor/        # Código-fonte da Companhia Oracle (Go) que escuta a EVM.
 ├── drone/           # Código-fonte do atuador físico (IoT Edge).
 ├── docs/            # Documentação técnica profunda e detalhamento dos fluxos econômicos.
-└── arquivos_sh/     # Ferramental DevOps (Integração e Deploy Contínuo).
+└── arquivos_sh/     # Ferramental DevOps, inicialização e simulação de sensores (UDP/TCP).
 ```
 
 ## Execução Local
@@ -85,12 +85,12 @@ ormuz/
    cd servidor
    go run main.go types.go queue.go listeners.go
    ```
-4. **Cliente CLI:**
-   Acione o painel tático das empresas contratantes:
+4. **Painel Web (Frontend):**
+   Acione o painel tático interativo das empresas contratantes:
    ```bash
-   cd client_cli
+   cd frontend-web
    npm install
-   npm run start
+   npm run dev
    ```
 
 ## Execução Docker
@@ -101,15 +101,18 @@ Para simplificar o levantamento de toda a plataforma de forma enjaulada, execute
 # Sobe a Blockchain, a Companhia Oracle e dois Drones Patrulha
 docker compose up -d
 
-# Aguarda a estabilização da EVM e executa as demonstrações operacionais simuladas
-./arquivos_sh/start_demo.sh
+# Inicialize o ecossistema com os scripts disponíveis
+./arquivos_sh/1_start_blockchain.sh
+./arquivos_sh/2_start_oracle.sh
+./arquivos_sh/3_stress_drones_combo.sh
+./arquivos_sh/4_stress_sensores.sh
 ```
 
 ## Operação Distribuída
 
 Para arquitetar uma implantação de rede dividida (Componentes executados fisicamente em máquinas de laboratório distintas), devem-se ajustar as seguintes variáveis de ambiente:
 
-* `BLOCKCHAIN_RPC`: No **Cliente CLI** e na **Companhia Oracle**, aponte esta variável para o IP real da máquina onde a Blockchain subiu (`ws://[IP]:8545`).
+* `BLOCKCHAIN_RPC`: No **Painel Web** e na **Companhia Oracle**, aponte esta variável para o IP real da máquina onde a Blockchain subiu (`ws://[IP]:8545`).
 * `CONTRACT_ADDRESS`: Em todos os nós, alimente esta variável caso o endereço do Smart Contract gerado no deploy mude.
 * `SERVER_ADDR`: Nos **Drones Patrulha**, aponte para a máquina na qual a Companhia Oracle está alocada (`[IP]:48082`).
 

@@ -36,8 +36,5 @@ sleep 5
 
 echo "✅ Companhia Oracle operacional."
 echo ""
-echo "🚀 Disparando Simulador do Cliente (TypeScript)..."
+echo "🚀 Tudo pronto! Agora você pode usar apenas o navegador no painel React Frontend."
 echo "==================================================="
-
-# Executa o simulador na pasta do cliente CLI
-npm run simulate --prefix ./client_cli

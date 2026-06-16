@@ -101,9 +101,7 @@ func RegistrarLaudoBlockchain(gs *GlobalState, missionId string, droneId string,
 	if envPk := os.Getenv("PRIVATE_KEY"); envPk != "" {
 		pkHex = envPk
 	}
-	if strings.HasPrefix(pkHex, "0x") {
-		pkHex = pkHex[2:]
-	}
+	pkHex = strings.TrimPrefix(pkHex, "0x")
 
 	privateKey, err := crypto.HexToECDSA(pkHex)
 	if err != nil {
