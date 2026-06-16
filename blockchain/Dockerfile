@@ -19,5 +19,9 @@ COPY . .
 # Expõe a porta RPC e WebSocket do Hardhat
 EXPOSE 8545
 
-# Inicia o nó local que fará o binding na interface 0.0.0.0
-CMD ["npx", "hardhat", "node", "--hostname", "0.0.0.0"]
+# Copia e configura o entrypoint
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Inicia o nó local e faz o deploy
+ENTRYPOINT ["/app/entrypoint.sh"]

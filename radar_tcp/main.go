@@ -43,9 +43,12 @@ func main() {
 		addr = "localhost:48081"
 	}
 
-	sensorID := os.Getenv("SENSOR_ID")
+	sensorID := os.Getenv("DEVICE_MAC")
 	if sensorID == "" {
-		sensorID = "RADAR_01"
+		sensorID = os.Getenv("SENSOR_ID")
+		if sensorID == "" {
+			sensorID = "RADAR_01"
+		}
 	}
 
 	sensorTipo := strings.ToUpper(os.Getenv("SENSOR_TIPO"))

@@ -34,9 +34,12 @@ func main() {
 	}
 	var conn *net.UDPConn
 
-	sensorID := os.Getenv("SENSOR_ID")
+	sensorID := os.Getenv("DEVICE_MAC")
 	if sensorID == "" {
-		sensorID = "BOIA_01"
+		sensorID = os.Getenv("SENSOR_ID")
+		if sensorID == "" {
+			sensorID = "BOIA_01"
+		}
 	}
 
 	conectarUDP := func(addr string) error {

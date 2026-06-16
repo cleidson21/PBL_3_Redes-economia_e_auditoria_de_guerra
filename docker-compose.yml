@@ -1,6 +1,6 @@
 services:
   blockchain:
-    build: ./blockchain
+    image: ${DOCKER_USER:-<dockerhub-usuario>}/ormuz_blockchain:latest
     container_name: ormuz_blockchain
     ports:
       - "8545:8545"
@@ -14,7 +14,7 @@ services:
     restart: always
 
   companhia_go:
-    image: <dockerhub-usuario>/companhia_oracle:latest
+    image: ${DOCKER_USER:-<dockerhub-usuario>}/companhia_oracle:latest
     container_name: companhia_principal
     depends_on:
       blockchain:
@@ -37,7 +37,7 @@ services:
         max-file: "3"
 
   drone_1:
-    image: <dockerhub-usuario>/drone_patrulha:latest
+    image: ${DOCKER_USER:-<dockerhub-usuario>}/drone_patrulha:latest
     container_name: drone_patrulha_1
     depends_on:
       - companhia_go
@@ -49,7 +49,7 @@ services:
     restart: always
 
   drone_2:
-    image: <dockerhub-usuario>/drone_patrulha:latest
+    image: ${DOCKER_USER:-<dockerhub-usuario>}/drone_patrulha:latest
     container_name: drone_patrulha_2
     depends_on:
       - companhia_go
@@ -61,7 +61,7 @@ services:
     restart: always
 
   dapp_frontend:
-    build: ./frontend-web
+    image: ${DOCKER_USER:-<dockerhub-usuario>}/painel_web3:latest
     container_name: dapp_frontend
     restart: unless-stopped
     depends_on:

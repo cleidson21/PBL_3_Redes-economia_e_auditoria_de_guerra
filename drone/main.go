@@ -61,9 +61,12 @@ func habilitarKeepAlive(conn net.Conn) {
 }
 
 func main() {
-	droneID := os.Getenv("DRONE_ID")
+	droneID := os.Getenv("DRONE_MAC")
 	if droneID == "" {
-		droneID = "DRONE_01"
+		droneID = os.Getenv("DRONE_ID")
+		if droneID == "" {
+			droneID = "DRONE_01"
+		}
 	}
 
 	addr := os.Getenv("SERVER_ADDR")

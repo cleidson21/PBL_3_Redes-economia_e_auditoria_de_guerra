@@ -53,6 +53,12 @@ func main() {
 		cfg.ContractAddress = envContract
 	}
 
+	envKey := os.Getenv("ORACLE_PRIVATE_KEY")
+	if envKey == "" {
+		log.Fatalf("FATAL: ORACLE_PRIVATE_KEY não configurada.")
+	}
+	cfg.PrivateKey = envKey
+
 	gs := NewGlobalState(meuSetor, cfg, 100, 3)
 
 	if err := InitBlockchain(gs); err != nil {

@@ -42,6 +42,19 @@ func InitBlockchain(gs *GlobalState) error {
 	gs.ContractAddress = addr
 
 	log.Printf("[Web3] 📜 Contrato carregado no endereço: %s", addr.Hex())
+
+	pkHex := strings.TrimPrefix(gs.ConfigData.PrivateKey, "0x")
+	privateKey, err := crypto.HexToECDSA(pkHex)
+	if err == nil {
+		publicKey := privateKey.Public()
+		if publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey); ok {
+			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+			log.Printf("[Web3] 🔑 Oracle Wallet: %s", fromAddress.Hex())
+		}
+	} else {
+		log.Fatalf("FATAL: Falha ao converter ORACLE_PRIVATE_KEY: %v", err)
+	}
+
 	return nil
 }
 
@@ -98,7 +111,7 @@ func ListenToBlockchainEvents(gs *GlobalState) {
 // RegistrarLaudoBlockchain submete uma transação atestando a conclusão da missão pelo drone. (Fase 5)
 func RegistrarLaudoBlockchain(gs *GlobalState, missionId string, droneId string, coords string, status string) error {
 	pkHex := gs.ConfigData.PrivateKey
-	if envPk := os.Getenv("PRIVATE_KEY"); envPk != "" {
+	if envPk := os.Getenv("ORACLE_PRIVATE_KEY"); envPk != "" {
 		pkHex = envPk
 	}
 	pkHex = strings.TrimPrefix(pkHex, "0x")
