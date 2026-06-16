@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -40,6 +41,11 @@ func main() {
 		}
 	}
 
+	if envPort := os.Getenv("SERVER_PORT"); envPort != "" {
+		if port, err := strconv.Atoi(envPort); err == nil {
+			cfg.ServerPort = port
+		}
+	}
 	if envRPC := os.Getenv("BLOCKCHAIN_RPC"); envRPC != "" {
 		cfg.BlockchainRPC = envRPC
 	}

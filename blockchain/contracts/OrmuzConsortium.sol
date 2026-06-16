@@ -82,8 +82,6 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         uint256 cost = (prioridade == 1) ? ESCOLTA_NORMAL : ESCOLTA_CRITICA;
         if (balanceOf(msg.sender) < cost) revert InsufficientBalance();
 
-        // Reter fundos no contrato (Escrow) de forma atômica
-        _transfer(msg.sender, address(this), cost);
         totalEscrowLocked += cost;
 
         missionId = _missionCounter++;
@@ -96,6 +94,8 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         m.createdAt = block.timestamp;
         m.deadline = block.timestamp + MISSION_TIMEOUT;
         m.status = MissionStatus.PENDENTE;
+
+        _transfer(msg.sender, address(this), cost);
 
         emit EscortPaid(missionId, msg.sender, cost, prioridade, m.deadline);
         return missionId;

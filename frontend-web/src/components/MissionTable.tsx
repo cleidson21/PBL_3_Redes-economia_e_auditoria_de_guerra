@@ -1,4 +1,4 @@
-import { Mission } from "../types/mission";
+import type { Mission } from "../types/mission";
 import { Countdown } from "./Countdown";
 import { reclamarReembolso } from "../services/web3";
 import { useState, useEffect } from "react";

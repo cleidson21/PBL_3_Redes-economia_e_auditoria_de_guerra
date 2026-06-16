@@ -16,8 +16,12 @@ func HabilitarKeepAlive(conn net.Conn) {
 	if !ok {
 		return
 	}
-	_ = tcpConn.SetKeepAlive(true)
-	_ = tcpConn.SetKeepAlivePeriod(3 * time.Second)
+	if err := tcpConn.SetKeepAlive(true); err != nil {
+		fmt.Printf("⚠️ [%s] Falha ao configurar TCP KeepAlive: %v\n", "SYS", err)
+	}
+	if err := tcpConn.SetKeepAlivePeriod(3 * time.Second); err != nil {
+		fmt.Printf("⚠️ [%s] Falha ao configurar período do KeepAlive: %v\n", "SYS", err)
+	}
 }
 
 // EnriquecerIdentidade normaliza IDs externos com o namespace local para evitar colisões entre módulos.
@@ -43,10 +47,11 @@ func registrarEstadoDrone(gs *GlobalState, droneID string, estado EstadoDrone) {
 
 // ListenSensoresTLM consome telemetria UDP, aplica histerese por sensor e enfileira alertas de clima.
 func ListenSensoresTLM(gs *GlobalState) {
-	addr, _ := net.ResolveUDPAddr("udp", ":48080")
+	port := fmt.Sprintf(":%d", gs.ServerPort)
+	addr, _ := net.ResolveUDPAddr("udp", port)
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		fmt.Printf("❌ [%s] Erro ao iniciar porta UDP 48080: %v\n", gs.MeuNamespace, err)
+		fmt.Printf("❌ [%s] Erro ao iniciar porta UDP %d: %v\n", gs.MeuNamespace, gs.ServerPort, err)
 		return
 	}
 	defer conn.Close()
@@ -110,9 +115,10 @@ func ListenSensoresTLM(gs *GlobalState) {
 
 // ListenRadarTCP consome eventos críticos TCP e distribui alertas para o restante do sistema.
 func ListenRadarTCP(gs *GlobalState) {
-	listener, err := net.Listen("tcp", ":48081")
+	port := fmt.Sprintf(":%d", gs.ServerPort+1)
+	listener, err := net.Listen("tcp", port)
 	if err != nil {
-		fmt.Printf("❌ [%s] Erro ao abrir porta TCP 48081: %v\n", gs.MeuNamespace, err)
+		fmt.Printf("❌ [%s] Erro ao abrir porta TCP %d: %v\n", gs.MeuNamespace, gs.ServerPort+1, err)
 		return
 	}
 	defer listener.Close()
@@ -141,15 +147,19 @@ func ListenRadarTCP(gs *GlobalState) {
 					}
 				}
 			}
+			if err := scanner.Err(); err != nil {
+				fmt.Printf("⚠️ [%s] Erro no scanner TCP: %v\n", gs.MeuNamespace, err)
+			}
 		}(conn)
 	}
 }
 
 // ListenDrones mantém o estado da frota sincronizado com registros e ACKs dos drones.
 func ListenDrones(gs *GlobalState) {
-	listener, err := net.Listen("tcp", ":48082")
+	port := fmt.Sprintf(":%d", gs.ServerPort+2)
+	listener, err := net.Listen("tcp", port)
 	if err != nil {
-		fmt.Printf("❌ [%s] Erro ao abrir porta TCP 48082: %v\n", gs.MeuNamespace, err)
+		fmt.Printf("❌ [%s] Erro ao abrir porta TCP %d: %v\n", gs.MeuNamespace, gs.ServerPort+2, err)
 		return
 	}
 	defer listener.Close()
@@ -173,7 +183,8 @@ func ListenDrones(gs *GlobalState) {
 
 				msg.Remetente = EnriquecerIdentidade(gs, msg.Remetente)
 
-				if msg.Tipo == "REG" {
+				switch msg.Tipo {
+				case "REG":
 					droneID = msg.Remetente
 
 					gs.DronesMu.Lock()
@@ -193,7 +204,7 @@ func ListenDrones(gs *GlobalState) {
 
 					fmt.Printf("🚁 [%s] Drone registado na base local!\n", droneID)
 
-				} else if msg.Tipo == "ACK" {
+				case "ACK":
 					gs.FrotaMu.Lock()
 					if estado, existe := gs.FrotaGlobal[msg.Remetente]; existe {
 						statusAnterior := estado.Status
@@ -226,6 +237,9 @@ func ListenDrones(gs *GlobalState) {
 						gs.FrotaMu.Unlock()
 					}
 				}
+			}
+			if err := scanner.Err(); err != nil {
+				fmt.Printf("⚠️ [%s] Erro no scanner TCP (Drones): %v\n", gs.MeuNamespace, err)
 			}
 
 			if droneID != "" {

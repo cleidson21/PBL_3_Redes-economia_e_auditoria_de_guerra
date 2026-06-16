@@ -29,20 +29,29 @@ export function useBlockchainEvents(onEvent?: () => void) {
     contract.on("RefundIssued", onRefundIssued);
 
     // Pragmatismo: Health Check básico periodicamente
-    const interval = setInterval(async () => {
+    let isMounted = true;
+    let timeoutId: number;
+
+    const checkHealth = async () => {
       try {
         await provider.getBlockNumber();
-        setIsOnline(true);
+        if (isMounted) setIsOnline(true);
       } catch (err) {
-        setIsOnline(false);
+        if (isMounted) setIsOnline(false);
       }
-    }, 5000);
+      if (isMounted) {
+        timeoutId = window.setTimeout(checkHealth, 5000);
+      }
+    };
+    
+    checkHealth();
 
     return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
       contract.off("EscortPaid", onEscortPaid);
       contract.off("MissionCompleted", onMissionCompleted);
       contract.off("RefundIssued", onRefundIssued);
-      clearInterval(interval);
     };
   }, [onEvent]);
 

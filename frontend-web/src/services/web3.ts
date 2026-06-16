@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import OrmuzConsortiumArtifact from "../abi/OrmuzConsortium.json";
-import { Mission, MissionStatus } from "../types/mission";
+import type { Mission, MissionStatus } from "../types/mission";
 
 const RPC_URL = import.meta.env.VITE_RPC_URL;
 const PRIVATE_KEY = import.meta.env.VITE_PRIVATE_KEY;
