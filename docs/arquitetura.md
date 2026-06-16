@@ -14,7 +14,7 @@ Neste cenário, a infraestrutura da borda e os drones funcionam conforme o plane
 
 ```mermaid
 sequenceDiagram
-    participant C as Cliente (CLI)
+    participant C as Empresa (Painel Web)
     participant B as Blockchain (Escrow)
     participant O as Oracle (Go)
     participant D as Drone (Borda)
@@ -34,7 +34,7 @@ Neste cenário (Falha de Comunicação, Erro no Oracle ou Drones Abatidos), a ja
 
 ```mermaid
 sequenceDiagram
-    participant C as Cliente (CLI)
+    participant C as Empresa (Painel Web)
     participant B as Blockchain (Escrow)
     participant O as Oracle (Go)
     participant D as Drone (Borda)
@@ -46,7 +46,7 @@ sequenceDiagram
     Note over O: Oracle não registra laudo a tempo
     Note over B: 3. Prazo de Timeout Expira
     C->>B: 4. Reivindica Restituição (reclamarReembolso)
-    Note over B: 5. Contrato DEVOLVE tokens ao Cliente
+    Note over B: 5. Contrato DEVOLVE tokens à Empresa
 ```
 
 ## Benefícios Matemáticos do Paradigma Web3
