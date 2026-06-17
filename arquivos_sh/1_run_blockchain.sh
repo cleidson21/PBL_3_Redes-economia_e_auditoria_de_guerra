@@ -1,38 +1,31 @@
 #!/bin/bash
 set -e
 
-cd "$(dirname "$0")/../blockchain"
+DOCKER_USER="${DOCKER_USER:-cleidsonramos}"
+IMG_BLOCKCHAIN="${IMG_BLOCKCHAIN:-$DOCKER_USER/ormuz_blockchain:latest}"
 
 echo -e "\e[1;34m===========================================\e[0m"
-echo -e "\e[1;32m🌍 Inicialização da Blockchain Hardhat\e[0m"
+echo -e "\e[1;32m🌍 Inicialização do Cartório Web3 (Máquina 1)\e[0m"
 echo -e "\e[1;34m===========================================\e[0m"
 
-# Verificar dependencias
-if ! command -v node &> /dev/null; then
-    echo -e "\e[1;31m❌ Node.js não encontrado!\e[0m"
-    exit 1
-fi
-if ! command -v npx &> /dev/null; then
-    echo -e "\e[1;31m❌ npx não encontrado!\e[0m"
-    exit 1
-fi
+docker pull "$IMG_BLOCKCHAIN" >/dev/null 2>&1 || true
+docker rm -f ormuz_blockchain_node 2>/dev/null || true
 
-echo "📦 Iniciando Hardhat Node..."
-npx hardhat node --hostname 0.0.0.0 &
-HARDHAT_PID=$!
+echo "🚀 Subindo nó Blockchain (Hardhat) na porta 8545..."
+docker run -d --name ormuz_blockchain_node -p 8545:8545 "$IMG_BLOCKCHAIN"
 
-sleep 4
+echo "⏳ Aguardando a Blockchain iniciar (5s)..."
+sleep 5
 
-echo ""
-echo -e "\e[1;33mCopie uma das Private Keys acima para iniciar Companhias Oracle.\e[0m"
-echo ""
+echo "📜 Forçando o Deploy do Smart Contract (Wallet #0)..."
+docker exec ormuz_blockchain_node npx hardhat ignition deploy ignition/modules/OrmuzConsortium.ts --network localhost >/dev/null 2>&1 || echo "⚠️ Aviso: Deploy falhou ou já foi feito pelo entrypoint."
 
-read -p "Deseja iniciar também o Frontend Web? (s/N) " RESP
-if [[ "$RESP" =~ ^[Ss]$ ]]; then
-    echo "🌐 Iniciando Frontend Vite..."
-    cd ../frontend-web
-    npm run dev -- --host 0.0.0.0
-else
-    echo "⏳ Pressione Ctrl+C para encerrar a Blockchain."
-    wait $HARDHAT_PID
-fi
+echo "💾 Extraindo Contas e Chaves Privadas..."
+# Pega os logs, filtra apenas as linhas de Account e Private Key, e salva no arquivo txt
+docker logs ormuz_blockchain_node | grep -E "Account #[0-9]+:|Private Key:" > chaves_blockchain.txt
+
+echo -e "\e[1;32m✅ Blockchain Operacional! Deploy Concluído.\e[0m"
+echo "-------------------------------------------"
+echo -e "\e[1;33mO arquivo 'chaves_blockchain.txt' foi gerado nesta pasta.\e[0m"
+echo -e "\e[1;36m-> Leve este pen-drive para as outras máquinas para subir as Companhias!\e[0m"
+echo "-------------------------------------------"

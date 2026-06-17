@@ -143,6 +143,16 @@ func (aq *AlertQueue) QueueStats() (criticalCount, normalCount int) {
 	return len(aq.critical), len(aq.normal)
 }
 
+// GetPendingAlerts retorna uma copia das listas de alertas pendentes.
+func (aq *AlertQueue) GetPendingAlerts() []Alert {
+	aq.mu.Lock()
+	defer aq.mu.Unlock()
+	alerts := make([]Alert, 0, len(aq.critical)+len(aq.normal))
+	alerts = append(alerts, aq.critical...)
+	alerts = append(alerts, aq.normal...)
+	return alerts
+}
+
 // StartConsumer executa o consumo de alertas quando há recurso de despacho disponível.
 func (aq *AlertQueue) StartConsumer(gs *GlobalState) {
 	go func() {

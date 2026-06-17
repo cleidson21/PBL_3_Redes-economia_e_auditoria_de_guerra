@@ -72,6 +72,15 @@ type Config struct {
 	PrivateKey      string `json:"private_key"`
 }
 
+// HealthStatus representa o estado do nó Oracle.
+type HealthStatus struct {
+	Status          string `json:"status"`
+	OracleWallet    string `json:"oracleWallet"`
+	ConnectedDrones int    `json:"connectedDrones"`
+	PendingAlerts   int    `json:"pendingAlerts"`
+	UptimeSeconds   int64  `json:"uptimeSeconds"`
+}
+
 // GlobalState reúne o estado compartilhado do servidor.
 type GlobalState struct {
 	MeuSetor     string
@@ -82,6 +91,7 @@ type GlobalState struct {
 	EthClient       *ethclient.Client
 	Contract        *contract.OrmuzConsortium
 	ContractAddress common.Address
+	OracleWallet    string
 
 	RadaresMu    sync.RWMutex
 	Radares      map[string]net.Conn

@@ -2,9 +2,14 @@ import { ethers } from "ethers";
 import OrmuzConsortiumArtifact from "../abi/OrmuzConsortium.json";
 import type { Mission, MissionStatus } from "../types/mission";
 
-const RPC_URL = import.meta.env.VITE_RPC_URL;
-const PRIVATE_KEY = import.meta.env.VITE_PRIVATE_KEY;
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
+const globalEnv = (window as any).ENV || {};
+export const RPC_URL = globalEnv.VITE_RPC_URL || import.meta.env.VITE_RPC_URL;
+export const PRIVATE_KEY = globalEnv.VITE_PRIVATE_KEY || import.meta.env.VITE_PRIVATE_KEY;
+export const CONTRACT_ADDRESS = globalEnv.VITE_CONTRACT_ADDRESS || import.meta.env.VITE_CONTRACT_ADDRESS;
+export const ORACLE_URL = globalEnv.VITE_ORACLE_URL || import.meta.env.VITE_ORACLE_URL;
+export const CONSORTIUM_WALLETS = globalEnv.VITE_CONSORTIUM_WALLETS || import.meta.env.VITE_CONSORTIUM_WALLETS || "";
+export const COMPANY_NAME = globalEnv.VITE_COMPANY_NAME || import.meta.env.VITE_COMPANY_NAME || "Companhia Base";
+export const ACCOUNT_ID = globalEnv.VITE_ACCOUNT_ID || import.meta.env.VITE_ACCOUNT_ID || "?";
 
 if (!RPC_URL || !PRIVATE_KEY || !CONTRACT_ADDRESS) {
   throw new Error("Variáveis Web3 não configuradas.");
@@ -98,6 +103,33 @@ export const listarMissoes = async (): Promise<Mission[]> => {
     id++;
   }
   
-  // Retorna as mais recentes primeiro
+// Retorna as mais recentes primeiro
+  return missionsList.reverse();
+};
+
+export const listarTodasMissoes = async (): Promise<Mission[]> => {
+  const missionsList: Mission[] = [];
+  
+  // Como o contador é privado no contrato, varremos até encontrar um ID 0 (vazio)
+  let id = 1;
+  while (true) {
+    const data = await contract.missions(id);
+    if (data.id === 0n) {
+      break;
+    }
+    missionsList.push({
+      id: Number(data.id),
+      cliente: data.client,
+      prioridade: Number(data.prioridade),
+      escrowAmount: ethers.formatEther(data.escrowAmount),
+      createdAt: Number(data.createdAt),
+      deadline: Number(data.deadline),
+      status: mapStatus(data.status),
+      reporter: data.reporter,
+      reportData: data.reportData
+    });
+    id++;
+  }
+  
   return missionsList.reverse();
 };

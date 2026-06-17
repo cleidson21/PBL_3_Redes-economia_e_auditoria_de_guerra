@@ -24,12 +24,10 @@ func InitBlockchain(gs *GlobalState) error {
 		return fmt.Errorf("falha ao conectar no BlockchainRPC (%s): %v", gs.ConfigData.BlockchainRPC, err)
 	}
 
-	chainID, err := client.ChainID(context.Background())
+	block, err := client.BlockNumber(context.Background())
 	if err != nil {
-		return fmt.Errorf("falha ao obter ChainID: %v", err)
+		return fmt.Errorf("falha ao obter eth_blockNumber: %v", err)
 	}
-
-	log.Printf("[Web3] 🌐 Conectado! RPC: %s | ChainID: %d", gs.ConfigData.BlockchainRPC, chainID)
 
 	addr := common.HexToAddress(gs.ConfigData.ContractAddress)
 	c, err := contract.NewOrmuzConsortium(addr, client)
@@ -41,19 +39,27 @@ func InitBlockchain(gs *GlobalState) error {
 	gs.Contract = c
 	gs.ContractAddress = addr
 
-	log.Printf("[Web3] 📜 Contrato carregado no endereço: %s", addr.Hex())
-
 	pkHex := strings.TrimPrefix(gs.ConfigData.PrivateKey, "0x")
 	privateKey, err := crypto.HexToECDSA(pkHex)
+	var oracleWallet string
 	if err == nil {
 		publicKey := privateKey.Public()
 		if publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey); ok {
 			fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-			log.Printf("[Web3] 🔑 Oracle Wallet: %s", fromAddress.Hex())
+			oracleWallet = fromAddress.Hex()
 		}
 	} else {
-		log.Fatalf("FATAL: Falha ao converter ORACLE_PRIVATE_KEY: %v", err)
+		return fmt.Errorf("falha ao converter ORACLE_PRIVATE_KEY: %v", err)
 	}
+
+	fmt.Println("==================================================")
+	fmt.Printf("Blockchain RPC: %s\n", gs.ConfigData.BlockchainRPC)
+	fmt.Printf("Oracle Wallet: %s\n", oracleWallet)
+	fmt.Printf("Latest Block: %d\n", block)
+	fmt.Printf("Contract Bound: OK\n")
+	fmt.Println("==================================================")
+
+	gs.OracleWallet = oracleWallet
 
 	return nil
 }

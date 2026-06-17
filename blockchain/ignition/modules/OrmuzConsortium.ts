@@ -13,8 +13,8 @@ const OrmuzConsortiumModule = buildModule("OrmuzConsortiumModule", (m) => {
   const initialAmountStr = process.env.INITIAL_OPC_PER_ACCOUNT || "50";
   const mintAmount = m.getParameter("mintAmount", BigInt(initialAmountStr) * 10n ** 18n);
 
-  // Distribuir o saldo inicial para as 10 primeiras contas de teste do Hardhat
-  for (let i = 0; i < 10; i++) {
+  // Distribuir o saldo inicial para as 20 primeiras contas de teste do Hardhat
+  for (let i = 0; i < 20; i++) {
     const account = m.getAccount(i);
     m.call(ormuzConsortium, "mint", [account, mintAmount], {
       from: deployer,

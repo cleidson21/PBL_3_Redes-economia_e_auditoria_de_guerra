@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"time"
 )
+
+var uptimeStart = time.Now()
 
 // LoadConfig carrega as configurações locais a partir de config.json
 func LoadConfig(path string) (*Config, error) {
@@ -77,6 +80,7 @@ func main() {
 
 	gs.AlertQueue.StartConsumer(gs)
 	go ProcessarFilaDrones(gs)
+	go initHTTPServer(gs)
 
 	go func() {
 		for {
@@ -106,5 +110,56 @@ func main() {
 	}()
 
 	select {}
+}
+
+func initHTTPServer(gs *GlobalState) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/api/drones", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		gs.FrotaMu.RLock()
+		defer gs.FrotaMu.RUnlock()
+		json.NewEncoder(w).Encode(gs.FrotaGlobal)
+	})
+
+	mux.HandleFunc("/api/alerts", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+		alerts := gs.AlertQueue.GetPendingAlerts()
+		json.NewEncoder(w).Encode(alerts)
+	})
+
+	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Content-Type", "application/json")
+
+		gs.FrotaMu.RLock()
+		qtdDronesVivos := 0
+		for _, estado := range gs.FrotaGlobal {
+			if estado.Status != "DESCONECTADO" {
+				qtdDronesVivos++
+			}
+		}
+		gs.FrotaMu.RUnlock()
+
+		crit, norm := gs.AlertQueue.QueueStats()
+
+		status := HealthStatus{
+			Status:          "ok",
+			OracleWallet:    gs.OracleWallet,
+			ConnectedDrones: qtdDronesVivos,
+			PendingAlerts:   crit + norm,
+			UptimeSeconds:   int64(time.Since(uptimeStart).Seconds()),
+		}
+
+		json.NewEncoder(w).Encode(status)
+	})
+
+	port := fmt.Sprintf(":%d", gs.ServerPort+3)
+	fmt.Printf("🌐 Servidor HTTP Iniciado em %s\n", port)
+	if err := http.ListenAndServe(port, mux); err != nil {
+		log.Fatalf("Erro no servidor HTTP: %v", err)
+	}
 }
 
