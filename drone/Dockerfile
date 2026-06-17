@@ -3,7 +3,7 @@ FROM golang:1.25-alpine AS builder
 WORKDIR /app
 
 # 1. Copia módulos e baixa dependências
-COPY go.mod go.sum ./
+COPY go.mod ./
 RUN go mod download
 
 # 2. Copia o código-fonte

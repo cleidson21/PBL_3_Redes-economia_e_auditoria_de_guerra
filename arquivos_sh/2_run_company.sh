@@ -13,7 +13,7 @@ if [ ! -f "chaves_blockchain.txt" ]; then
 fi
 
 # Defina o IP da Máquina Blockchain aqui, ou deixe vazio para ser perguntado no terminal
-IP_BLOCKCHAIN="192.168.1.100" # <-- EDITE ESTE VALOR ANTES DE RODAR
+IP_BLOCKCHAIN="" # <-- EDITE ESTE VALOR ANTES DE RODAR
 
 if [ -z "$IP_BLOCKCHAIN" ]; then
     read -p "🌐 IP da Máquina Blockchain (ex: 192.168.1.100): " IP_BLOCKCHAIN
