@@ -18,14 +18,6 @@ echo "==========================================="
 echo "🚀 Iniciando rotina de CI/Docker Push"
 echo "==========================================="
 
-echo "🔐 Validando autenticação no Docker Hub..."
-if ! docker info | grep -q "Username"; then
-    echo "❌ Erro: Você não está autenticado no Docker Hub."
-    echo "Por favor, execute 'docker login' primeiro."
-    exit 1
-fi
-echo "✅ Autenticação validada."
-
 echo ""
 echo "🏗️  Construindo a imagem da Blockchain (Hardhat + Deploy Automático)..."
 docker build -t ${DOCKER_USER}/ormuz_blockchain:latest ./blockchain
