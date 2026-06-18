@@ -27,7 +27,7 @@ docker push ${DOCKER_USER}/ormuz_blockchain:latest
 
 echo ""
 echo "🏗️  Construindo a imagem da Companhia Oracle (Go)..."
-docker build -t ${DOCKER_USER}/companhia_oracle:latest ./servido
+docker build -t ${DOCKER_USER}/companhia_oracle:latest ./servidor
 
 echo "📤 Fazendo push da imagem Companhia Oracle..."
 docker push ${DOCKER_USER}/companhia_oracle:latest
