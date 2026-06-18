@@ -90,11 +90,20 @@ func ListenToBlockchainEvents(gs *GlobalState) {
 					log.Printf("[Web3 Event] 🚀 Solicitação de Missão (Escolta Paga)! MissionID: %s, Client: %s, Amount: %s", event.MissionId.String(), event.Client.Hex(), event.Amount.String())
 					
 					prio := int(event.Prioridade)
+					
+					alert, ok := gs.AlertQueue.TryDequeueAlert()
+					coords := "0,0"
+					if ok {
+						coords = alert.Coordenada
+						log.Printf("[Web3] ✅ Alerta local consumido para Missão %s. Coordenada: %s", event.MissionId.String(), coords)
+					} else {
+						log.Printf("[Web3] ⚠️ Nenhum alerta na fila. Missão %s despachada para coordenada padrao (0,0)", event.MissionId.String())
+					}
 
 					missao := Missao{
 						MissionId:   event.MissionId.String(),
 						Prioridade:  prio,
-						Coordenadas: "0,0",
+						Coordenadas: coords,
 					}
 
 					gs.FilaMissoes.Mu.Lock()

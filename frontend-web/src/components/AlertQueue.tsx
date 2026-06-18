@@ -16,6 +16,7 @@ interface Props {
 export function AlertQueue({ onUpdate }: Props) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [dispatchedIds, setDispatchedIds] = useState<Set<string>>(new Set());
 
   const fetchAlerts = async () => {
     try {
@@ -41,6 +42,7 @@ export function AlertQueue({ onUpdate }: Props) {
       // O Oracle não cria missões localmente. O despacho submete a mesma transação
       // do Smart Contract usada pelo CLI, preservando validações e escrow na Blockchain.
       await solicitarEscolta(prioridade);
+      setDispatchedIds(prev => new Set(prev).add(alertId));
       window.dispatchEvent(new CustomEvent('app-toast', { detail: { message: "Despacho autorizado via Blockchain!", type: "success" }}));
       onUpdate();
       fetchAlerts();
@@ -59,11 +61,11 @@ export function AlertQueue({ onUpdate }: Props) {
         <h2 className="text-lg font-bold text-slate-100">Fila de Alertas (Sugestão Operacional)</h2>
       </div>
 
-      {alerts.length === 0 ? (
+      {alerts.filter(al => !dispatchedIds.has(al.ID)).length === 0 ? (
         <div className="text-center py-6 text-slate-500">Nenhum alerta pendente.</div>
       ) : (
         <div className="space-y-3">
-          {alerts.map((al) => (
+          {alerts.filter(al => !dispatchedIds.has(al.ID)).map((al) => (
             <div key={al.ID} className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
               <div>
                 <div className="flex items-center gap-2">

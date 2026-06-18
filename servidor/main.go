@@ -78,7 +78,6 @@ func main() {
 	go ListenRadarTCP(gs)
 	go ListenDrones(gs)
 
-	gs.AlertQueue.StartConsumer(gs)
 	go ProcessarFilaDrones(gs)
 	go initHTTPServer(gs)
 

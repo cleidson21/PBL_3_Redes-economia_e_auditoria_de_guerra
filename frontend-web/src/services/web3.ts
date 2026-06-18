@@ -42,8 +42,19 @@ export const mintTokens = async (amount: number): Promise<ethers.TransactionRece
 };
 
 export const solicitarEscolta = async (prioridade: number): Promise<ethers.TransactionReceipt> => {
-  const tx = await contract.payForEscort(prioridade);
-  return await tx.wait();
+  try {
+    const tx = await contract.payForEscort(prioridade);
+    return await tx.wait();
+  } catch (error: any) {
+    if (
+      error.data === "0xf4d678b8" ||
+      (error.info && error.info.error && error.info.error.data === "0xf4d678b8") ||
+      JSON.stringify(error).includes("0xf4d678b8")
+    ) {
+      throw new Error("Saldo insuficiente (OPC) para contratar esta escolta.");
+    }
+    throw error;
+  }
 };
 
 export const reclamarReembolso = async (missionId: number): Promise<ethers.TransactionReceipt> => {

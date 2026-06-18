@@ -153,32 +153,34 @@ func (aq *AlertQueue) GetPendingAlerts() []Alert {
 	return alerts
 }
 
-// StartConsumer executa o consumo de alertas quando há recurso de despacho disponível.
-func (aq *AlertQueue) StartConsumer(gs *GlobalState) {
-	go func() {
-		for {
-			// O consumidor só avança quando existe ao menos um drone local livre.
-			for {
-				gs.FrotaMu.RLock()
-				dronesLivres := 0
-				for _, drone := range gs.FrotaGlobal {
-					if drone.Status == "LIVRE" && drone.Setor == gs.MeuSetor {
-						dronesLivres++
-					}
-				}
-				gs.FrotaMu.RUnlock()
+// TryDequeueAlert tenta consumir um alerta da fila sem bloquear, para ser associado a uma missão Web3.
+func (aq *AlertQueue) TryDequeueAlert() (Alert, bool) {
+	aq.mu.Lock()
+	defer aq.mu.Unlock()
 
-				if dronesLivres > 0 {
-					break
-				}
+	if len(aq.normal) > 0 && aq.processedCount >= aq.starveThreshold {
+		alert := aq.normal[0]
+		aq.normal = aq.normal[1:]
+		alert.Prioridade = 2
+		aq.processedCount = 0
+		fmt.Printf("🚀 Starvation Prevention: alerta normal foi PROMOVIDO para CRÍTICO no Web3!\n")
+		return alert, true
+	}
 
-				time.Sleep(100 * time.Millisecond)
-			}
+	if len(aq.critical) > 0 {
+		alert := aq.critical[0]
+		aq.critical = aq.critical[1:]
+		aq.processedCount++
+		return alert, true
+	}
 
-			alert := aq.DequeueAlert()
-			ExecutarDespacho(gs, alert.ID, alert.Coordenada, alert.Prioridade)
-		}
-	}()
+	if len(aq.normal) > 0 {
+		alert := aq.normal[0]
+		aq.normal = aq.normal[1:]
+		return alert, true
+	}
+
+	return Alert{}, false
 }
 
 // ProcessarFilaDrones é o worker que consome a FilaDeMissoes e gerencia o estado de ocupação do Drone
