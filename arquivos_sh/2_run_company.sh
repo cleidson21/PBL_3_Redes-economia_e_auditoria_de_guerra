@@ -12,7 +12,13 @@ if [ ! -f "chaves_blockchain.txt" ]; then
     exit 1
 fi
 
-read -p "🌐 IP da Máquina Blockchain (ex: 192.168.0.25): " IP_BLOCKCHAIN
+# Configuração Fixa de IPs (Edite aqui se precisar)
+IP_BLOCKCHAIN="172.16.103.6"
+IP_ALFA="172.16.103.5"
+IP_BETA="172.16.103.7"
+
+echo -e "\e[1;36m🌐 IP Blockchain configurado: $IP_BLOCKCHAIN\e[0m"
+
 read -p "🏢 Nome desta Companhia (ex: Alfa, Beta): " NOME_CIA
 read -p "🔑 Qual Conta usar? (Digite um número de 1 a 19): " ACCOUNT_ID
 read -p "🚪 Porta Base do Oracle (Ex: 48080 para Alfa, 48090 para Beta): " PORTA_BASE
@@ -46,8 +52,15 @@ PORT_TCP1=$((PORTA_BASE + 1))
 PORT_TCP2=$((PORTA_BASE + 2))
 PORT_API=$((PORTA_BASE + 3))
 
-# IP Local Inteligente (usa hostname -I e pega o primeiro IP real da rede, como o 192.168.0.25)
-IP_LOCAL=$(hostname -I | awk '{print $1}')
+# IP Local baseado na companhia (ou fallback para hostname)
+if [ "$NOME_CIA_DOCKER" = "alfa" ]; then
+    IP_LOCAL=$IP_ALFA
+elif [ "$NOME_CIA_DOCKER" = "beta" ]; then
+    IP_LOCAL=$IP_BETA
+else
+    IP_LOCAL=$(hostname -I | awk '{print $1}')
+fi
+echo -e "\e[1;36m🌐 IP Local da Companhia ($NOME_CIA_DOCKER) definido como: $IP_LOCAL\e[0m"
 
 echo "🧹 Limpando instâncias antigas da companhia ${NOME_CIA}..."
 docker rm -f "oracle_${NOME_CIA_DOCKER}" "front_${NOME_CIA_DOCKER}" "radar_${NOME_CIA_DOCKER}" "sensor_${NOME_CIA_DOCKER}" 2>/dev/null || true
@@ -71,7 +84,7 @@ docker run -d --restart unless-stopped --name "oracle_${NOME_CIA_DOCKER}" \
 echo "🌐 [2/4] Subindo Dashboard Web3 (Frontend)..."
 docker run -d --restart unless-stopped --name "front_${NOME_CIA_DOCKER}" \
     -p ${PORTA_FRONT}:5173 \
-    -e VITE_BLOCKCHAIN_RPC="http://${IP_BLOCKCHAIN}:8545" \
+    -e VITE_RPC_URL="http://${IP_BLOCKCHAIN}:8545" \
     -e VITE_PRIVATE_KEY="$PRIVATE_KEY" \
     -e VITE_ORACLE_URL="http://${IP_LOCAL}:${PORT_API}" \
     -e VITE_COMPANY_NAME="$NOME_CIA" \
