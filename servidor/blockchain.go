@@ -17,7 +17,8 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// InitBlockchain conecta ao RPC da blockchain e instancia o contrato Web3. (Fase 3)
+// InitBlockchain conecta ao nó RPC da Ethereum/Hardhat (Fase 3 da arquitetura).
+// Cria o bind com a interface Go (abigen) gerada a partir do ABI do Smart Contract.
 func InitBlockchain(gs *GlobalState) error {
 	client, err := ethclient.Dial(gs.ConfigData.BlockchainRPC)
 	if err != nil {
@@ -64,7 +65,10 @@ func InitBlockchain(gs *GlobalState) error {
 	return nil
 }
 
-// ListenToBlockchainEvents assina e escuta o evento WatchEscortPaid em tempo real. (Fase 4)
+// ListenToBlockchainEvents assina o evento WatchEscortPaid do Smart Contract. (Fase 4)
+// Opera em loop infinito utilizando WebSockets para recepção em tempo real. Sempre
+// que o evento é capturado, ele cruza com as coordenadas do próximo radar/sensor 
+// e empurra a missão consolidada para a FilaMissoes.
 func ListenToBlockchainEvents(gs *GlobalState) {
 	for {
 		log.Printf("[Web3] 🎧 Iniciando Listener do contrato (WatchEscortPaid)...")
@@ -123,7 +127,9 @@ func ListenToBlockchainEvents(gs *GlobalState) {
 	}
 }
 
-// RegistrarLaudoBlockchain submete uma transação atestando a conclusão da missão pelo drone. (Fase 5)
+// RegistrarLaudoBlockchain (Fase 5) é responsável por efetuar uma Transação (Write)
+// na rede Blockchain atestando a conclusão física da patrulha.
+// Monta, assina localmente (ECDSA) e despacha a transação contendo os dados auditados pelo drone.
 func RegistrarLaudoBlockchain(gs *GlobalState, missionId string, droneId string, coords string, status string) error {
 	pkHex := gs.ConfigData.PrivateKey
 	if envPk := os.Getenv("ORACLE_PRIVATE_KEY"); envPk != "" {

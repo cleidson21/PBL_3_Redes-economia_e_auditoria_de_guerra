@@ -93,30 +93,33 @@ ormuz/
    npm run dev
    ```
 
-## Execução Docker
+## Execução Distribuída Simplificada (Scripts)
 
-Para simplificar o levantamento de toda a plataforma de forma enjaulada, execute o pipeline de orquestração automatizado:
+Para simplificar o levantamento de toda a plataforma em computadores diferentes, o projeto conta com scripts automatizados na pasta `arquivos_sh/`. A topologia foi projetada para ter 1 máquina servindo a Blockchain, e `N` máquinas servindo as Companhias.
 
+**Na Máquina 1 (Cartório Web3):**
+Esta máquina será o nó validador e hospedará os Smart Contracts.
 ```bash
-# Sobe a Blockchain, a Companhia Oracle e dois Drones Patrulha
-docker compose up -d
-
-# Inicialize o ecossistema com os scripts disponíveis
-./arquivos_sh/1_start_blockchain.sh
-./arquivos_sh/2_start_oracle.sh
-./arquivos_sh/3_stress_drones_combo.sh
-./arquivos_sh/4_stress_sensores.sh
+cd arquivos_sh
+bash 1_run_blockchain.sh
 ```
+*O script subirá o nó local, fará o deploy e gerará um arquivo `chaves_blockchain.txt` com as credenciais. Você deve copiar este arquivo para as outras máquinas.*
 
-## Operação Distribuída
+**Nas Máquinas 2, 3, 4... (Companhias Logísticas):**
+Cada máquina representará uma Companhia de Navegação (Alfa, Beta, Gama, etc.) isolada.
+```bash
+# Certifique-se de colocar o arquivo chaves_blockchain.txt nesta pasta
+cd arquivos_sh
+bash 2_run_company.sh
+```
+*O script foi projetado com **auto-descoberta de IP**. Ele não exigirá configurações manuais de portas para evitar conflitos, basta informar o nome da Companhia e ele cuidará de levantar o Oracle, o Painel Web3, Radares, Sensores e a frota de Drones daquela máquina em específico.*
 
-Para arquitetar uma implantação de rede dividida (Componentes executados fisicamente em máquinas de laboratório distintas), devem-se ajustar as seguintes variáveis de ambiente:
+## Estrutura Automática de Variáveis
 
-* `BLOCKCHAIN_RPC`: No **Painel Web** e na **Companhia Oracle**, aponte esta variável para o IP real da máquina onde a Blockchain subiu (`ws://[IP]:8545`).
-* `CONTRACT_ADDRESS`: Em todos os nós, alimente esta variável caso o endereço do Smart Contract gerado no deploy mude.
-* `SERVER_ADDR`: Nos **Drones Patrulha**, aponte para a máquina na qual a Companhia Oracle está alocada (`[IP]:48082`).
-
-*Nota:* As chaves privadas (`Private Keys`) do Cliente e da Companhia encontram-se mapeadas de maneira estática (originadas pela EVM do Hardhat) para propósitos de simulação técnica.
+O script automatiza as variáveis exigidas pelos microsserviços. Por baixo dos panos, ele realiza as seguintes amarrações:
+* `VITE_RPC_URL` e `BLOCKCHAIN_RPC`: Apontam de forma dinâmica para a máquina 1.
+* `SERVER_ADDR`: Mapeado para o IP local (`hostname -I`) nos sensores físicos (Drones/Radares).
+* `VITE_PRIVATE_KEY` / `ORACLE_PRIVATE_KEY`: Alimentados automaticamente pelo arquivo `chaves_blockchain.txt` de acordo com o slot escolhido (1 a 19).
 
 ## Referências
 

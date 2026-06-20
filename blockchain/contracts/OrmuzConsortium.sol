@@ -5,6 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+/**
+ * @title OrmuzConsortium
+ * @dev Contrato inteligente responsável pela orquestração financeira e logística 
+ * das missões de escolta naval. Implementa o padrão de Escrow (custódia) onde 
+ * os fundos ficam retidos até que a frota reporte o cumprimento da patrulha.
+ */
+
 // Custom Errors
 error MissionNotFound();
 error MissionAlreadyFinalized();
@@ -18,10 +25,14 @@ error EscrowTransferFailed();
 
 contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    bytes32 public constant REPORTER_ROLE = keccak256("REPORTER_ROLE");
+    bytes32 public constant REPORTER_ROLE = keccak256("REPORTER_ROLE"); // Papel destinado à Companhia Oracle para reportar laudos
 
+    // Custos fixos das operações logísticas em wei
     uint256 public constant ESCOLTA_NORMAL = 5 ether;
     uint256 public constant ESCOLTA_CRITICA = 10 ether;
+    
+    // Tempo máximo permitido para um Drone confirmar a conclusão da missão.
+    // Após este prazo, o cliente ganha o direito de solicitar reembolso integral.
     uint256 public constant MISSION_TIMEOUT = 30 seconds;
 
     uint256 public totalEscrowLocked;
@@ -76,6 +87,12 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         _mint(to, amount);
     }
 
+    /**
+     * @dev Função acionada pelo Cliente (Empresa Naval) para solicitar uma nova escolta.
+     * Retém (Escrow) a taxa em OPC no contrato e define a Deadline da missão.
+     * @param prioridade 1 (Normal) ou 2 (Crítica).
+     * @return missionId O identificador sequencial gerado para a missão.
+     */
     function payForEscort(uint8 prioridade) external nonReentrant returns (uint256 missionId) {
         if (prioridade != 1 && prioridade != 2) revert InvalidPriority();
         
@@ -95,6 +112,7 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         m.deadline = block.timestamp + MISSION_TIMEOUT;
         m.status = MissionStatus.PENDENTE;
 
+        // Trava os fundos do cliente no contrato (Escrow)
         _transfer(msg.sender, address(this), cost);
 
         emit EscortPaid(missionId, msg.sender, cost, prioridade, m.deadline);
@@ -124,6 +142,11 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         emit MissionCompleted(missionId, msg.sender, m.escrowAmount);
     }
 
+    /**
+     * @dev Função executada pelo Cliente quando a Oracle falha em entregar o laudo a tempo.
+     * Retira os fundos do Escrow e os devolve imediatamente ao solicitante.
+     * @param missionId O ID da missão que expirou o SLA.
+     */
     function reclamarReembolso(uint256 missionId) external nonReentrant {
         Mission storage m = missions[missionId];
         if (m.id == 0) revert MissionNotFound();
@@ -134,7 +157,7 @@ contract OrmuzConsortium is ERC20, AccessControl, ReentrancyGuard {
         m.status = MissionStatus.FALHOU;
         totalEscrowLocked -= m.escrowAmount;
 
-        // Devolução segura dos OPCs para o cliente
+        // Devolução segura e garantida dos OPCs (Escrow reverso)
         _transfer(address(this), m.client, m.escrowAmount);
 
         emit RefundIssued(missionId, m.client, m.escrowAmount);

@@ -29,6 +29,9 @@ func LoadConfig(path string) (*Config, error) {
 }
 
 
+// main é o ponto de entrada da Companhia Oracle.
+// Ele inicializa a configuração, acopla a carteira local (Web3) com o Smart Contract
+// e paraleliza as rotinas de Escuta de Sensores, Gestão de Fila e Servidor HTTP.
 func main() {
 	meuSetor := os.Getenv("MEU_SETOR")
 	if meuSetor == "" {
@@ -111,6 +114,8 @@ func main() {
 	select {}
 }
 
+// initHTTPServer expõe uma API RESTful para o Dashboard Web3.
+// Ela fornece visibilidade local do estado da Frota e das Filas (Crítica/Normal).
 func initHTTPServer(gs *GlobalState) {
 	mux := http.NewServeMux()
 

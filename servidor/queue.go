@@ -9,6 +9,7 @@ import (
 
 
 // ExecutarDespacho escolhe um drone livre local e encaminha o comando de despacho.
+// Caso nenhum drone esteja disponível, o alerta é devolvido para a fila de prioridades (AlertQueue).
 func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, prioridade int) {
 	var droneEscolhido string
 
@@ -71,7 +72,9 @@ func ExecutarDespacho(gs *GlobalState, requisicaoID string, coordenada string, p
 	}
 }
 
-// EnqueueAlert insere um alerta na fila correta respeitando o limite de capacidade de cada prioridade.
+// EnqueueAlert insere um alerta na fila correta (Normal ou Crítica) respeitando
+// a capacidade máxima (maxSize). Se a fila estiver cheia, o alerta é descartado
+// para evitar estouro de memória (backpressure drops).
 func (aq *AlertQueue) EnqueueAlert(gs *GlobalState, coordenada string, prioridade int, idRequisicao string) bool {
 	aq.mu.Lock()
 	defer aq.mu.Unlock()
@@ -107,7 +110,10 @@ func (aq *AlertQueue) EnqueueAlert(gs *GlobalState, coordenada string, prioridad
 	return true
 }
 
-// DequeueAlert bloqueia até existir trabalho e aplica a política de starvation prevention.
+// DequeueAlert é uma operação bloqueante que consome e retorna o alerta de maior prioridade.
+// Implementa "Starvation Prevention": se a fila Crítica foi consumida continuamente 
+// por N vezes (starveThreshold), o próximo alerta extraído será obrigatoriamente
+// da fila Normal, que é promovido internamente para prioridade Crítica.
 func (aq *AlertQueue) DequeueAlert() Alert {
 	aq.mu.Lock()
 	defer aq.mu.Unlock()
@@ -183,7 +189,9 @@ func (aq *AlertQueue) TryDequeueAlert() (Alert, bool) {
 	return Alert{}, false
 }
 
-// ProcessarFilaDrones é o worker que consome a FilaDeMissoes e gerencia o estado de ocupação do Drone
+// ProcessarFilaDrones atua como um Worker Pool infinito consumindo missões originadas
+// do Smart Contract (Web3). Ele aguarda (via Cond.Wait) até que existam missões e drones livres.
+// Assim que um pareamento é possível, ele trava o drone e envia as coordenadas via TCP.
 func ProcessarFilaDrones(gs *GlobalState) {
 	for {
 		var missao Missao
